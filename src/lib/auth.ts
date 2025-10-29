@@ -23,7 +23,7 @@ export async function createSession(userId: string, email: string) {
   const cookieStore = await cookies();
   cookieStore.set('session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Cambiado temporalmente para permitir HTTP
     sameSite: 'lax',
     expires: expiresAt,
     path: '/',
@@ -80,7 +80,7 @@ export async function updateSession(request: NextRequest) {
       name: 'session',
       value: newToken,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Cambiado temporalmente para permitir HTTP
       sameSite: 'lax',
       expires: expiresAt,
       path: '/',
