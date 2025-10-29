@@ -150,8 +150,14 @@ CURRENT_PORT=${CURRENT_PORT:-3000}
 
 # Preguntar por puerto
 echo -e "${CYAN}¿En qué puerto quieres ejecutar la aplicación?${NC}"
-read -p "Puerto (Enter para usar $CURRENT_PORT): " APP_PORT
-APP_PORT=${APP_PORT:-$CURRENT_PORT}
+read -p "Puerto (Enter para usar $CURRENT_PORT): " USER_INPUT
+
+# Si el usuario no escribió nada, usar el puerto actual
+if [ -z "$USER_INPUT" ]; then
+    APP_PORT=$CURRENT_PORT
+else
+    APP_PORT=$USER_INPUT
+fi
 
 # Actualizar puerto en .env
 if [[ "$OSTYPE" == "darwin"* ]]; then
