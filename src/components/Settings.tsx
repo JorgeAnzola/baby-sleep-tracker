@@ -271,8 +271,7 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
 
           <div className="border-t border-gray-200/50 my-6"></div>
 
-          {/* Data Management - TEMPORARILY HIDDEN */}
-          {false && (
+          {/* Data Management */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl bg-gradient-to-r ${themeConfig.colors.primary} text-white shadow-md`}>
@@ -348,7 +347,6 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
               </Card>
             </div>
           </div>
-          )}
 
           <div className="border-t border-gray-200/50 my-6"></div>
 
