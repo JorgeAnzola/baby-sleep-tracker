@@ -144,16 +144,20 @@ if grep -q "CHANGE_THIS" .env; then
     fi
 fi
 
+# Cargar puerto actual del .env si existe
+CURRENT_PORT=$(grep "^APP_PORT=" .env 2>/dev/null | cut -d'=' -f2)
+CURRENT_PORT=${CURRENT_PORT:-3000}
+
 # Preguntar por puerto
 echo -e "${CYAN}¿En qué puerto quieres ejecutar la aplicación?${NC}"
-read -p "Puerto (Enter para usar 3000): " APP_PORT
-APP_PORT=${APP_PORT:-3000}
+read -p "Puerto (Enter para usar $CURRENT_PORT): " APP_PORT
+APP_PORT=${APP_PORT:-$CURRENT_PORT}
 
 # Actualizar puerto en .env
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    sed -i '' "s/APP_PORT=.*/APP_PORT=$APP_PORT/" .env
+    sed -i '' "s/^APP_PORT=.*/APP_PORT=$APP_PORT/" .env
 else
-    sed -i "s/APP_PORT=.*/APP_PORT=$APP_PORT/" .env
+    sed -i "s/^APP_PORT=.*/APP_PORT=$APP_PORT/" .env
 fi
 
 echo ""
