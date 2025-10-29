@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: napgenius-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-napgenius}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_password}
+      POSTGRES_DB: ${POSTGRES_DB:-napgenius}
+    volumes:
+      - napgenius_db:/var/lib/postgresql/data
+    networks:
+      - napgenius-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-napgenius}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: jorgeanzola/baby-sleep-tracker:latest
+    container_name: napgenius-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-napgenius}:${POSTGRES_PASSWORD:-change_this_password}@db:5432/${POSTGRES_DB:-napgenius}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_SECRET_KEY_IMMEDIATELY}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - napgenius_data:/app/data
+    networks:
+      - napgenius-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  napgenius_db:
+    driver: local
+  napgenius_data:
+    driver: local
+
+networks:
+  napgenius-network:
+    driver: bridge

@@ -1,0 +1,156 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  password      String      // Hashed password
+  name          String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  ownedBabies   Baby[]      @relation("BabyOwner")
+  sharedBabies  BabyCollaborator[]
+  
+  @@map("users")
+}
+
+model Baby {
+  id          String      @id @default(cuid())
+  userId      String      // Owner user ID
+  user        User        @relation("BabyOwner", fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  birthDate   DateTime
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  sleepSessions   SleepSession[]
+  settings        BabySettings?
+  collaborators   BabyCollaborator[]
+  
+  @@map("babies")
+}
+
+model BabyCollaborator {
+  id          String      @id @default(cuid())
+  babyId      String
+  baby        Baby        @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        CollaboratorRole @default(VIEWER)
+  invitedBy   String?     // User ID who invited this collaborator
+  acceptedAt  DateTime?   // When they accepted the invitation
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  @@unique([babyId, userId])
+  @@map("baby_collaborators")
+}
+
+enum CollaboratorRole {
+  OWNER       // Full control (owner)
+  EDITOR      // Can edit sleep sessions, settings
+  VIEWER      // Can only view data
+  
+  @@map("collaborator_role")
+}
+
+model BabySettings {
+  id                String   @id @default(cuid())
+  babyId           String   @unique
+  baby             Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  
+  // Sleep schedule preferences
+  bedtime          String   // Time in HH:MM format
+  wakeTime         String   // Time in HH:MM format
+  
+  // Nap settings
+  expectedNaps     Int      @default(2) // Expected number of naps per day based on age
+  
+  // Notification settings
+  predictAlerts    Boolean  @default(true)
+  quietHours       Boolean  @default(true)
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  @@map("baby_settings")
+}
+
+model SleepSession {
+  id            String      @id @default(cuid())
+  babyId        String
+  baby          Baby        @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  
+  startTime     DateTime
+  endTime       DateTime?   // null if session is still active
+  duration      Int?        // Duration in minutes, calculated when session ends
+  
+  sleepType     SleepType
+  quality       SleepQuality?
+  notes         String?
+  
+  // Location where baby slept
+  location      String?     // "crib", "stroller", "car", "arms", etc.
+  
+  // Environmental factors
+  temperature   Float?
+  brightness    String?     // "dark", "dim", "bright"
+  noise         String?     // "quiet", "white_noise", "normal"
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@map("sleep_sessions")
+}
+
+model SleepPrediction {
+  id                String      @id @default(cuid())
+  babyId           String
+  
+  // Prediction data
+  predictedNapTime  DateTime
+  confidence        Float       // 0.0 to 1.0 confidence score
+  predictedDuration Int         // Expected duration in minutes
+  
+  // Factors used in prediction
+  lastSleepEnd     DateTime
+  awakeTime        Int         // Minutes awake since last sleep
+  timeOfDay        String      // "morning", "afternoon", "evening"
+  avgNapDuration   Int         // Average nap duration for this time
+  
+  // Tracking
+  wasAccurate      Boolean?    // Set after the fact to track accuracy
+  actualNapTime    DateTime?   // Actual nap time if different
+  actualDuration   Int?        // Actual duration for accuracy tracking
+  
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  @@map("sleep_predictions")
+}
+
+enum SleepType {
+  NAP
+  NIGHTTIME
+  
+  @@map("sleep_type")
+}
+
+enum SleepQuality {
+  POOR
+  FAIR
+  GOOD
+  EXCELLENT
+  
+  @@map("sleep_quality")
+}
