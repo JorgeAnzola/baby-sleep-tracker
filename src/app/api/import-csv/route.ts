@@ -1,3 +1,4 @@
+import { rateLimit } from '@/lib/rate-limit';
 import { PrismaClient } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -99,6 +100,16 @@ function parseCsvContent(csvContent: string): HuckleberryRow[] {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting: 10 CSV imports per hour per IP
+  const rateLimitResponse = rateLimit(request, { 
+    windowMs: 3600000, // 1 hour
+    maxRequests: 10 
+  });
+  
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
