@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguageStore } from '@/lib/i18n/language-store';
 import {
-    calculateBabyAge,
-    calculatePersonalizedSchedule,
-    getRecommendedScheduleForAge
+  calculateBabyAge,
+  calculatePersonalizedSchedule,
+  getRecommendedScheduleForAge
 } from '@/lib/sleep-predictions';
 import { type SleepSession, useSleepStore } from '@/lib/store';
 import { Calendar, RefreshCw, Sparkles, TrendingUp } from 'lucide-react';
@@ -38,6 +38,9 @@ export default function ScheduleConfig({ birthDate, sessions }: ScheduleConfigPr
     scheduleConfig?.napDurations ?? recommended.napDurations
   );
   const [showSuccess, setShowSuccess] = useState(false);
+  const [bedtime, setBedtime] = useState(
+    scheduleConfig?.bedtime ?? recommended.bedtime
+  );
   
   // Save to store whenever values change
   useEffect(() => {
@@ -45,28 +48,29 @@ export default function ScheduleConfig({ birthDate, sessions }: ScheduleConfigPr
       napsPerDay,
       wakeWindows,
       napDurations,
+      bedtime,
     });
-  }, [napsPerDay, wakeWindows, napDurations, setScheduleConfig]);
+  }, [napsPerDay, wakeWindows, napDurations, bedtime, setScheduleConfig]);
   
   const handleResetToAge = () => {
     const recommended = getRecommendedScheduleForAge(ageInDays);
     setNapsPerDay(recommended.averageNaps);
     setWakeWindows(recommended.awakeWindows);
     setNapDurations(recommended.napDurations);
+    setBedtime(recommended.bedtime);
     showSuccessMessage();
   };
   
   const handleResetToHistory = () => {
     const personalized = calculatePersonalizedSchedule(sessions, ageInDays);
-    
     if (!personalized) {
       alert(t.scheduleConfig.notEnoughData);
       return;
     }
-    
     setNapsPerDay(personalized.averageNaps);
     setWakeWindows(personalized.awakeWindows);
     setNapDurations(personalized.napDurations);
+    // Mantener bedtime actual, o podrías calcular uno personalizado si lo deseas
     showSuccessMessage();
   };
   
@@ -214,7 +218,21 @@ export default function ScheduleConfig({ birthDate, sessions }: ScheduleConfigPr
           </div>
         </div>
         
-        {/* Nap Durations */}
+  {/* Nap Durations */}
+        {/* Bedtime */}
+        <div className="space-y-2">
+          <Label htmlFor="bedtime" className="text-sm font-semibold">
+            {t.scheduleConfig.bedtimeLabel || 'Bedtime (hora de dormir)'}
+          </Label>
+          <p className="text-xs text-gray-600 mb-2">{t.scheduleConfig.bedtimeDescription || 'Hora recomendada para acostar al bebé (formato 24h, ej: 19:00)'}</p>
+          <Input
+            id="bedtime"
+            type="time"
+            value={bedtime}
+            onChange={e => setBedtime(e.target.value)}
+            className="w-32"
+          />
+        </div>
         <div className="space-y-3">
           <Label className="text-sm font-semibold">
             {t.scheduleConfig.napDurations}

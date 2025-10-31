@@ -160,6 +160,7 @@ export interface CustomScheduleConfig {
   napsPerDay: number;
   wakeWindows: number[];
   napDurations: number[];
+  bedtime?: string; // Optional, e.g. '19:00'
 }
 
 export function predictNextNap(
@@ -186,7 +187,7 @@ export function predictNextNap(
       averageNaps: customSchedule.napsPerDay,
       napDurations: customSchedule.napDurations,
       awakeWindows: customSchedule.wakeWindows,
-      bedtime: '19:00', // Default bedtime
+      bedtime: customSchedule.bedtime || '19:00',
       nightSleep: 600   // Default night sleep duration
     };
     usingCustomSchedule = true;
