@@ -55,7 +55,8 @@ export default function Home() {
     startTimer,
     stopTimer,
     updateTimerStartTime,
-    setTimerRunning
+    setTimerRunning,
+    scheduleConfig
   } = useSleepStore();
 
   const { getThemeConfig } = useThemeStore();
@@ -426,7 +427,7 @@ export default function Home() {
       setPredictions(newPredictions);
     } else {
       // Baby is awake, predict next nap and bedtime
-      const nextNap = predictNextNap(currentBaby.birthDate, sessions);
+      const nextNap = predictNextNap(currentBaby.birthDate, sessions, new Date(), scheduleConfig);
       const bedtime = predictBedtime(currentBaby.birthDate, sessions);
 
       const newPredictions = [
@@ -443,7 +444,7 @@ export default function Home() {
       setPredictions(newPredictions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBaby, activeSleepSession]);
+  }, [currentBaby, activeSleepSession, scheduleConfig]);
 
   // Load initial data
   useEffect(() => {

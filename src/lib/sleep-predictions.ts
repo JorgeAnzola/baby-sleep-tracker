@@ -156,10 +156,17 @@ function analyzePersonalSleepPatterns(
   };
 }
 
+export interface CustomScheduleConfig {
+  napsPerDay: number;
+  wakeWindows: number[];
+  napDurations: number[];
+}
+
 export function predictNextNap(
   birthDate: Date,
   allSessions: SleepSession[],
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  customSchedule?: CustomScheduleConfig | null
 ): {
   predictedTime: Date;
   confidence: number;
@@ -167,7 +174,25 @@ export function predictNextNap(
   reasoning: string;
 } {
   const ageInDays = calculateBabyAge(birthDate);
-  const pattern = getSleepPatternForAge(ageInDays);
+  
+  // Use custom schedule if provided, otherwise fall back to age-based pattern
+  let pattern: SleepPattern;
+  let usingCustomSchedule = false;
+  
+  if (customSchedule) {
+    // Convert custom schedule to pattern format
+    pattern = {
+      age: ageInDays,
+      averageNaps: customSchedule.napsPerDay,
+      napDurations: customSchedule.napDurations,
+      awakeWindows: customSchedule.wakeWindows,
+      bedtime: '19:00', // Default bedtime
+      nightSleep: 600   // Default night sleep duration
+    };
+    usingCustomSchedule = true;
+  } else {
+    pattern = getSleepPatternForAge(ageInDays);
+  }
   
   // Find the last completed sleep session
   const lastSleep = allSessions
@@ -181,11 +206,12 @@ export function predictNextNap(
   if (!lastSleep || !lastSleep.endTime) {
     // No recent sleep data, use default pattern
     const predictedTime = addMinutes(currentTime, pattern.awakeWindows[0]);
+    const scheduleType = usingCustomSchedule ? 'custom schedule' : 'typical sleep pattern for age';
     return {
       predictedTime,
       confidence: 0.4,
       predictedDuration: pattern.napDurations[0],
-      reasoning: 'Based on typical sleep pattern for age (no recent data)'
+      reasoning: `Based on ${scheduleType} (no recent data)`
     };
   }
   
@@ -234,16 +260,19 @@ export function predictNextNap(
     
     confidence = Math.min(0.95, 0.5 + sampleSizeBonus + consistencyBonus + (awakeWindowAccuracy * 0.3));
     
-    reasoning = `Personalized prediction (${personalPattern.sampleSize} samples, ${Math.round(personalPattern.consistency * 100)}% consistent) - ${timeAwake}min awake, expecting ${finalAwakeWindow}min`;
+    const scheduleType = usingCustomSchedule ? 'custom schedule' : 'age pattern';
+    reasoning = `Personalized prediction (${personalPattern.sampleSize} samples, ${Math.round(personalPattern.consistency * 100)}% consistent) based on ${scheduleType} - ${timeAwake}min awake, expecting ${finalAwakeWindow}min`;
   } else if (personalPattern.sampleSize > 0) {
     // Some personal data, but not enough for full personalization
     confidence = 0.6 + (personalPattern.sampleSize * 0.05);
-    reasoning = `Limited personal data (${personalPattern.sampleSize} samples) + age pattern - ${timeAwake}min awake, expecting ${finalAwakeWindow}min`;
+    const scheduleType = usingCustomSchedule ? 'custom schedule' : 'age pattern';
+    reasoning = `Limited personal data (${personalPattern.sampleSize} samples) + ${scheduleType} - ${timeAwake}min awake, expecting ${finalAwakeWindow}min`;
   } else {
     // No personal data, use age-based patterns only
     const awakeWindowDiff = Math.abs(timeAwake - expectedAwakeWindow);
     confidence = Math.max(0.4, 0.8 - (awakeWindowDiff / expectedAwakeWindow));
-    reasoning = `Age-based pattern only - ${timeAwake}min awake, expecting ${expectedAwakeWindow}min`;
+    const scheduleType = usingCustomSchedule ? 'Custom schedule' : 'Age-based pattern';
+    reasoning = `${scheduleType} only - ${timeAwake}min awake, expecting ${finalAwakeWindow}min`;
   }
   
   // Predict nap time based on last sleep + calculated awake window
