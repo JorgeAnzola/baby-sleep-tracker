@@ -134,6 +134,8 @@ export interface Translation {
     napDurationsDescription: string;
     napNumber: string;
     minutes: string;
+    bedtimeLabel: string;
+    bedtimeDescription: string;
     resetToAlgorithm: string;
     resetToAlgorithmDescription: string;
     resetSuccess: string;

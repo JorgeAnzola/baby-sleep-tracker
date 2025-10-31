@@ -21,8 +21,8 @@ COPY . .
 # Set a dummy DATABASE_URL for build time (Prisma needs it to generate client)
 ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
 
-# Generar Prisma Client
-RUN npx prisma generate
+# Generar Prisma Client (ignorar errores de certificado solo en build)
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1

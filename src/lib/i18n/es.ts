@@ -132,6 +132,8 @@ export const es: Translation = {
     napDurationsDescription: 'Duración típica de cada siesta (minutos)',
     napNumber: 'Siesta',
     minutes: 'minutos',
+    bedtimeLabel: 'Hora de dormir',
+    bedtimeDescription: 'Hora recomendada para acostar al bebé (formato 24h, ej: 19:00)',
     resetToAlgorithm: 'Reiniciar a Recomendaciones',
     resetToAlgorithmDescription: 'Recalcular horario basado en edad y datos históricos',
     resetSuccess: 'Horario actualizado exitosamente',

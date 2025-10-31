@@ -33,6 +33,7 @@ export interface ScheduleConfig {
   napsPerDay: number;
   wakeWindows: number[];
   napDurations: number[];
+  bedtime?: string; // Optional, e.g. '19:00'
 }
 
 interface SleepStore {

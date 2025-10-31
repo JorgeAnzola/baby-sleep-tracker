@@ -126,6 +126,8 @@ export const pt: Translation = {
     napDurationsDescription: 'Duração típica de cada soneca (minutos)',
     napNumber: 'Soneca',
     minutes: 'minutos',
+    bedtimeLabel: 'Hora de dormir',
+    bedtimeDescription: 'Hora recomendada para colocar o bebê para dormir (formato 24h, ex: 19:00)',
     resetToAlgorithm: 'Redefinir para Recomendações',
     resetToAlgorithmDescription: 'Recalcular horário baseado na idade e dados históricos',
     resetSuccess: 'Horário atualizado com sucesso',

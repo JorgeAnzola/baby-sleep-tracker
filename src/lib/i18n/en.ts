@@ -132,6 +132,8 @@ export const en: Translation = {
     napDurationsDescription: 'Typical duration of each nap (minutes)',
     napNumber: 'Nap',
     minutes: 'minutes',
+    bedtimeLabel: 'Bedtime',
+    bedtimeDescription: 'Recommended time to put your baby to bed (24h format, e.g. 19:00)',
     resetToAlgorithm: 'Reset to Recommendations',
     resetToAlgorithmDescription: 'Recalculate schedule based on age and historical data',
     resetSuccess: 'Schedule updated successfully',
