@@ -56,11 +56,12 @@ export default function Home() {
     stopTimer,
     updateTimerStartTime,
     setTimerRunning,
-    scheduleConfig
+    scheduleConfig,
+    syncScheduleConfig
   } = useSleepStore();
 
-  const { getThemeConfig } = useThemeStore();
-  const { t } = useLanguageStore();
+  const { getThemeConfig, syncTheme } = useThemeStore();
+  const { t, syncLanguage } = useLanguageStore();
   const [mounted, setMounted] = useState(false);
   // Use default theme during SSR to avoid hydration mismatch
   const themeConfig = mounted ? getThemeConfig() : {
@@ -86,6 +87,15 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync user preferences from server on mount
+  useEffect(() => {
+    if (mounted) {
+      syncTheme();
+      syncLanguage();
+      syncScheduleConfig();
+    }
+  }, [mounted, syncTheme, syncLanguage, syncScheduleConfig]);
 
   const loadBabies = useCallback(async () => {
     setIsLoading(true);

@@ -59,6 +59,7 @@ interface SleepStore {
   // Schedule configuration
   scheduleConfig: ScheduleConfig | null;
   setScheduleConfig: (config: ScheduleConfig) => void;
+  syncScheduleConfig: () => Promise<void>; // Sync with backend
   
   // Timer state
   timerStartTime: Date | null;
@@ -113,7 +114,28 @@ export const useSleepStore = create<SleepStore>()(
       
       // Schedule configuration
       scheduleConfig: null,
-      setScheduleConfig: (config) => set({ scheduleConfig: config }),
+      setScheduleConfig: (config) => {
+        set({ scheduleConfig: config });
+        // Sync with backend asynchronously
+        fetch('/api/user/preferences', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scheduleConfig: config }),
+        }).catch(err => console.error('Failed to sync schedule config:', err));
+      },
+      syncScheduleConfig: async () => {
+        try {
+          const response = await fetch('/api/user/preferences');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.scheduleConfig) {
+              set({ scheduleConfig: data.scheduleConfig });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to sync schedule config from server:', error);
+        }
+      },
       
       // Timer state
       timerStartTime: null,

@@ -18,6 +18,11 @@ model User {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   
+  // User preferences (synced across devices)
+  theme         String?     @default("default") // Theme ID
+  language      String?     @default("en") // Language code
+  scheduleConfig Json?      // JSON object with napsPerDay, wakeWindows, napDurations, bedtime
+  
   ownedBabies   Baby[]      @relation("BabyOwner")
   sharedBabies  BabyCollaborator[]
   
