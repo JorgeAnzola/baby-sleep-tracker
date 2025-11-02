@@ -312,12 +312,16 @@ function analyzePersonalBedtimePatterns(
   console.log('  Cutoff date:', cutoffDate.toISOString());
   
   const nighttimeSessions = sessions
-    .filter(s => 
-      s.sleepType === 'NIGHTTIME' && 
-      s.startTime > cutoffDate &&
-      s.startTime.getHours() >= 17 && // Evening bedtimes only
-      s.startTime.getHours() <= 23
-    )
+    .filter(s => {
+      if (s.sleepType !== 'NIGHTTIME') return false;
+      
+      const startTime = s.startTime instanceof Date ? s.startTime : new Date(s.startTime);
+      if (startTime <= cutoffDate) return false;
+      
+      const hour = startTime.getHours();
+      // Accept bedtimes between 6 PM and 2 AM (next day)
+      return (hour >= 18 || hour <= 2);
+    })
     .map(s => {
       const startTime = s.startTime instanceof Date ? s.startTime : new Date(s.startTime);
       return {
@@ -392,8 +396,8 @@ export function predictBedtime(
     bedtimeSource = 'custom schedule';
   }
   // Priority 2: Use personal bedtime if available, consistent, and no custom schedule
-  // Only use personal history if consistency is at least 60% (avoid using unreliable data)
-  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 15 && personalBedtime.consistency >= 0.6) {
+  // Lowered thresholds: 7+ samples and 40% consistency (was 15 samples and 60%)
+  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
     const personalWeight = Math.min(0.8, personalBedtime.sampleSize / 30);
     const ageWeight = 1 - personalWeight;
     
@@ -429,13 +433,13 @@ export function predictBedtime(
   if (customSchedule?.bedtime) {
     confidence = 0.85; // High confidence for manual configuration
     reasoning = `Custom bedtime (${customSchedule.bedtime})`;
-  } else if (personalBedtime.sampleSize >= 5 && personalBedtime.consistency >= 0.4) {
-    // Using personal history with good consistency
+  } else if (personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
+    // Using personal history with acceptable consistency
     const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
     const consistencyBonus = personalBedtime.consistency * 0.3;
     confidence = 0.6 + sampleBonus + consistencyBonus;
     reasoning = `Personalized bedtime (${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`;
-  } else if (personalBedtime.sampleSize >= 5 && personalBedtime.consistency < 0.4) {
+  } else if (personalBedtime.sampleSize >= 3 && personalBedtime.consistency < 0.4) {
     // Has data but too inconsistent to trust
     confidence = 0.55;
     reasoning = `Age-based bedtime: ${pattern.bedtime} (personal data too inconsistent: ${Math.round(personalBedtime.consistency * 100)}%)`;
