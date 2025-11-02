@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const prisma = new PrismaClient();
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * GET /api/baby-settings/[babyId]
  * Fetch baby-specific settings (schedule config, bedtime, etc.)
@@ -63,12 +65,9 @@ export async function GET(
       babyId: baby.settings.babyId,
       bedtime: baby.settings.bedtime,
       wakeTime: baby.settings.wakeTime,
-      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
-      napsPerDay: baby.settings.napsPerDay,
-      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
-      wakeWindows: baby.settings.wakeWindows,
-      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
-      napDurations: baby.settings.napDurations,
+      napsPerDay: (baby.settings as any).napsPerDay,
+      wakeWindows: (baby.settings as any).wakeWindows,
+      napDurations: (baby.settings as any).napDurations,
       predictAlerts: baby.settings.predictAlerts,
       quietHours: baby.settings.quietHours,
     });
@@ -137,7 +136,6 @@ export async function PUT(
     } = body;
     
     // Build update data object (only include fields that were provided)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
     if (bedtime !== undefined) updateData.bedtime = bedtime;
     if (wakeTime !== undefined) updateData.wakeTime = wakeTime;
@@ -160,7 +158,6 @@ export async function PUT(
         ...(napDurations !== undefined && { napDurations }),
         predictAlerts: predictAlerts ?? true,
         quietHours: quietHours ?? true,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
       update: updateData,
     });
