@@ -434,7 +434,7 @@ export function predictBedtime(
     const sampleBonus = Math.min(0.2, personalBedtime.sampleSize / 50);
     const consistencyBonus = personalBedtime.consistency * 0.25;
     confidence = 0.7 + sampleBonus + consistencyBonus;
-    reasoningParts.push(`Blended (custom ${customSchedule!.bedtime} + ${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`);
+    reasoningParts.push(`Blended (custom ${customSchedule!.bedtime} + ${personalBedtime.sampleSize} samples)`);
   } else if (personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
     const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
     const consistencyBonus = personalBedtime.consistency * 0.3;

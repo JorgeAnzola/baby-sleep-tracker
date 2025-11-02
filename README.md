@@ -368,17 +368,37 @@ sensor:
 The prediction algorithm is based on:
 
 1. **Age patterns**: Data from infant sleep research
-2. **Personal history**: Analysis of individual patterns
+2. **Personal history**: Analysis of individual patterns (last 60 days)
 3. **Wake windows**: Optimal awake time by age
-4. **Temporal context**: Time of day and number of naps
-5. **Sleep quality**: Adjustments based on previous nap quality
+4. **Daily context**: Real-time adjustments based on today's naps
+5. **Intelligent blending**: Custom preferences + historical data
+
+### Nap Predictions
+
+- Blends age-based patterns with personal history (up to 80% weight)
+- Analyzes wake windows and nap durations
+- Adjusts confidence based on data consistency
+- Example: `"Personalized (42 samples, 78% consistent) based on custom schedule - 81min awake, expecting 120min - Nap 1/2"`
+
+### Bedtime Predictions (Enhanced v1.0.5)
+
+Intelligently adjusts bedtime based on:
+- **Custom bedtime** blended with **historical average** (70/30 split)
+- **Nap count**: Fewer naps → Earlier bedtime (-15min per missing nap)
+- **Nap duration**: More/less sleep → Later/earlier bedtime (±30min max)
+- **Last wake window**: Recent nap → Push bedtime later
+- **No-nap days**: Long wake window → Earlier bedtime (-30min)
+
+Example reasoning:
+- `"Blended (custom 19:00 + 25 samples, 65% consistent) • 1 fewer nap (-15min) • Last nap recent (+10min)"`
+- `"Personalized (42 samples, 78% consistent) • +0.8h naps (+20min)"`
 
 ### Age Patterns
 
-- **0-3 months**: 4 naps, 45-120min windows
-- **3-6 months**: 3 naps, 120-210min windows
-- **6-12 months**: 2 naps, 180-270min windows
-- **12+ months**: 1 nap, 300-360min windows
+- **0-3 months**: 4 naps, 45-120min windows, bedtime ~19:00-19:30
+- **3-6 months**: 3 naps, 120-210min windows, bedtime ~19:00
+- **6-12 months**: 2 naps, 180-270min windows, bedtime ~19:00
+- **12+ months**: 1 nap, 300-360min windows, bedtime ~19:30-20:00
 
 ## 🚀 Development
 

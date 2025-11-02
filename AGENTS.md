@@ -116,22 +116,52 @@ DELETE /api/sleep-session/{session-id}
 
 Three prediction functions:
 - `predictNextNap()` - Predicts next nap time and duration
-- `predictBedtime()` - Predicts nighttime sleep
+- `predictBedtime()` - Intelligently predicts nighttime sleep with daily pattern analysis
 - `predictWakeUp()` - Predicts wake time during active sleep
 
-**Algorithm Logic**:
-1. Age-based sleep patterns (research data)
-2. Personal history analysis (last 7-14 days)
-3. Wake window calculations
-4. Confidence scoring based on data availability
+#### **Nap Prediction Logic**:
+1. **Base Pattern**: Age-based or custom schedule
+2. **Personal History**: Analyzes last 60 days, blends with base (up to 80% weight)
+3. **Wake Window**: Time since last sleep + expected awake window
+4. **Confidence**: Based on sample size, consistency, and current timing accuracy
+
+**Example Output**: 
+```
+"Personalized prediction (42 samples, 78% consistent) based on custom schedule - 81min awake, expecting 120min - Nap 1/2"
+```
+
+#### **Bedtime Prediction Logic** (Enhanced in v1.0.5):
+1. **Base Blending**: Combines custom bedtime with historical average (up to 70% personal weight)
+2. **Nap Count Adjustment**: 
+   - Fewer naps than expected → Earlier bedtime (-15min per missing nap)
+   - More naps → Later bedtime (+10min per extra nap)
+3. **Nap Duration Analysis**: 
+   - Total nap time vs expected → Adjusts bedtime accordingly
+   - More sleep → Later bedtime (up to +30min)
+   - Less sleep → Earlier bedtime (up to -30min)
+4. **Last Wake Window**: Checks if last nap ended recently, pushes bedtime if needed
+5. **No-Nap Days**: If awake 8+ hours, suggests earlier bedtime (-30min)
+6. **Confidence**: 55-95% based on data quality and current day patterns
+
+**Example Output**:
+```
+"Blended (custom 19:00 + 25 samples, 65% consistent) • 1 fewer nap (-15min) • Last nap recent (+10min)"
+"Personalized (42 samples, 78% consistent) • +0.8h naps (+20min)"
+```
 
 **Age Patterns**:
 ```typescript
-0-3 months: 4 naps, 45-120min wake windows
-3-6 months: 3 naps, 120-210min wake windows
-6-12 months: 2 naps, 180-270min wake windows
-12+ months: 1 nap, 300-360min wake windows
+0-3 months: 4 naps, 45-120min wake windows, bedtime ~19:00-19:30
+3-6 months: 3 naps, 120-210min wake windows, bedtime ~19:00
+6-12 months: 2 naps, 180-270min wake windows, bedtime ~19:00
+12+ months: 1 nap, 300-360min wake windows, bedtime ~19:30-20:00
 ```
+
+**Key Features**:
+- Both nap and bedtime predictions now consider **real-time daily context**
+- Adjusts dynamically based on how the day actually went
+- Provides detailed reasoning for transparency
+- Never blindly follows custom schedules - always blends with reality
 
 ### 3. CSV Import (Huckleberry)
 **Files**: `src/components/CsvImport.tsx`, `src/app/api/import-csv/route.ts`
