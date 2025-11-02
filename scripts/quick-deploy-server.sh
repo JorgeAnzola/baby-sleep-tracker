@@ -99,16 +99,9 @@ echo ""
 # Paso 8: Migrar datos
 echo -e "${YELLOW}8. Migrando datos (User.scheduleConfig → BabySettings)...${NC}"
 
-# Instalar ts-node localmente en el proyecto (no globalmente para evitar permisos)
-echo "Verificando dependencias de ts-node..."
-if ! docker exec napgenius-app npm list ts-node > /dev/null 2>&1; then
-    echo "Instalando ts-node localmente..."
-    docker exec napgenius-app npm install --save-dev ts-node typescript
-fi
-
-# Ejecutar script de migración
+# Ejecutar script de migración (usa versión JavaScript para evitar problemas de permisos con ts-node)
 echo "Ejecutando migración de datos..."
-docker exec napgenius-app npx ts-node scripts/migrate-schedule-config.ts
+docker exec napgenius-app node scripts/migrate-schedule-config.js
 echo -e "${GREEN}✅ Datos migrados${NC}"
 echo ""
 
