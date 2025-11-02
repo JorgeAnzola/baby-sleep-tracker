@@ -70,7 +70,7 @@ export default function ScheduleConfig({ birthDate, sessions }: ScheduleConfigPr
     setNapsPerDay(personalized.averageNaps);
     setWakeWindows(personalized.awakeWindows);
     setNapDurations(personalized.napDurations);
-    // Mantener bedtime actual, o podrías calcular uno personalizado si lo deseas
+    setBedtime(personalized.bedtime);
     showSuccessMessage();
   };
   
