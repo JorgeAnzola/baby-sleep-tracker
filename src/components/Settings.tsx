@@ -31,6 +31,8 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
   const [isEditingBirthDate, setIsEditingBirthDate] = useState(false);
   const [newBirthDate, setNewBirthDate] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDeletingData, setIsDeletingData] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const { currentTheme, setTheme, getThemeConfig, getAllThemes } = useThemeStore();
   const { language, setLanguage, t, getAvailableLanguages } = useLanguageStore();
@@ -99,8 +101,39 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
         setIsLoggingOut(false);
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Logout error:', error);
       setIsLoggingOut(false);
+    }
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    setIsDeletingData(true);
+    try {
+      const response = await fetch(`/api/sleep-session/delete-all?babyId=${babyId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert(`✅ Eliminados ${data.deletedCount} registros de sueño`);
+        setShowDeleteConfirm(false);
+        // Recargar la página para actualizar los datos
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(`❌ Error: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('❌ Error al eliminar los datos');
+    } finally {
+      setIsDeletingData(false);
     }
   };
 
@@ -326,11 +359,11 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
               </Card>
 
               {/* Clear Data */}
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-red-50/80 to-rose-50/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.01] border-red-100/50 opacity-75">
+              <Card className="border-0 shadow-lg bg-linear-to-br from-red-50/80 to-rose-50/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.01] border-red-100/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center justify-between">
                     <span className="font-semibold text-red-800">Eliminar Todos los Datos</span>
-                    <Badge variant="destructive" className="text-xs bg-gradient-to-r from-red-500 to-red-600 text-white border-0 shadow-sm">
+                    <Badge variant="destructive" className="text-xs bg-linear-to-r from-red-500 to-red-600 text-white border-0 shadow-sm">
                       Peligroso
                     </Badge>
                   </CardTitle>
@@ -339,10 +372,44 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
                   <p className="text-xs text-gray-600 mb-4 leading-relaxed">
                     Elimina permanentemente todos los registros de sueño. Esta acción no se puede deshacer.
                   </p>
-                  <Button variant="destructive" size="sm" disabled className="w-full opacity-60">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Eliminar Todo
-                  </Button>
+                  {!showDeleteConfirm ? (
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={handleDeleteAllData}
+                      disabled={!isOwner}
+                      className="w-full"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Eliminar Todo
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-red-600 mb-2">
+                        ⚠️ ¿Estás seguro? Esta acción eliminará {sessions.length} registros.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={handleDeleteAllData}
+                          disabled={isDeletingData}
+                          className="flex-1"
+                        >
+                          {isDeletingData ? 'Eliminando...' : 'Sí, Eliminar'}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setShowDeleteConfirm(false)}
+                          disabled={isDeletingData}
+                          className="flex-1"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
