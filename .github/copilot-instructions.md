@@ -13,7 +13,9 @@ A modern web application for tracking baby sleep patterns with predictive analyt
 
 ### Features:
 - Sleep tracking with timer functionality
-- Predictive sleep schedule based on age and historical data
+- Intelligent predictive sleep schedule with daily pattern analysis
+- Historical data analysis (naps, bedtime, wake windows)
+- Context-aware bedtime adjustments based on today's naps
 - Beautiful, sleek mobile-first UI
 - API endpoints for home automation integration
 - Sleep analytics and patterns
