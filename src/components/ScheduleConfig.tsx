@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguageStore } from '@/lib/i18n/language-store';
 import {
-  calculateBabyAge,
-  calculatePersonalizedSchedule,
-  getRecommendedScheduleForAge
+    calculateBabyAge,
+    calculatePersonalizedSchedule,
+    getRecommendedScheduleForAge
 } from '@/lib/sleep-predictions';
 import { type SleepSession, useSleepStore } from '@/lib/store';
 import { Calendar, RefreshCw, Sparkles, TrendingUp } from 'lucide-react';
