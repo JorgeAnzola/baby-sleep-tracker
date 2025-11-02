@@ -2,6 +2,8 @@ import { calculateBabyAge, predictBedtime, predictNextNap } from '@/lib/sleep-pr
 import { PrismaClient } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
@@ -31,17 +33,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Parse schedule config from BabySettings (NEW: per-baby) or User (DEPRECATED: per-user fallback)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let scheduleConfig: any = null;
     if (baby.settings) {
       // NEW: Use baby-specific settings (all collaborators see same config)
       scheduleConfig = {
-        // @ts-expect-error - Field exists after migration
-        napsPerDay: baby.settings.napsPerDay ?? undefined,
-        // @ts-expect-error - Field exists after migration
-        wakeWindows: baby.settings.wakeWindows as number[] | undefined,
-        // @ts-expect-error - Field exists after migration
-        napDurations: baby.settings.napDurations as number[] | undefined,
+        napsPerDay: (baby.settings as any).napsPerDay ?? undefined,
+        wakeWindows: (baby.settings as any).wakeWindows as number[] | undefined,
+        napDurations: (baby.settings as any).napDurations as number[] | undefined,
         bedtime: baby.settings.bedtime ?? undefined,
       };
     } else if (baby.user.scheduleConfig) {
