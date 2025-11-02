@@ -381,7 +381,7 @@ export function predictBedtime(
   }
   // Priority 2: Use personal bedtime if available, consistent, and no custom schedule
   // Only use personal history if consistency is at least 60% (avoid using unreliable data)
-  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 5 && personalBedtime.consistency >= 0.6) {
+  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 15 && personalBedtime.consistency >= 0.6) {
     const personalWeight = Math.min(0.8, personalBedtime.sampleSize / 30);
     const ageWeight = 1 - personalWeight;
     
