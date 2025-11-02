@@ -112,6 +112,9 @@ model SleepSession {
   brightness    String?     // "dark", "dim", "bright"
   noise         String?     // "quiet", "white_noise", "normal"
   
+  // Night waking tracking
+  nightWakings  NightWaking[]
+  
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   
@@ -158,4 +161,29 @@ enum SleepQuality {
   EXCELLENT
   
   @@map("sleep_quality")
+}
+
+model NightWaking {
+  id              String       @id @default(cuid())
+  sleepSessionId  String       @map("sleep_session_id")
+  sleepSession    SleepSession @relation(fields: [sleepSessionId], references: [id], onDelete: Cascade)
+
+  wakeTime        DateTime     @map("wake_time")
+  backToSleepTime DateTime?    @map("back_to_sleep_time")
+  durationMinutes Int?         @map("duration_minutes")
+
+  interventionType String      @map("intervention_type")
+  feedType        String?      @map("feed_type")
+  feedAmount      Float?       @map("feed_amount")
+  feedUnit        String?      @map("feed_unit")
+
+  notes           String?
+  tags            String[]
+
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  @@map("night_wakings")
+  @@index([sleepSessionId])
+  @@index([wakeTime])
 }
