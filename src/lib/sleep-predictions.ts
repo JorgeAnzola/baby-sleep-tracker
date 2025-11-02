@@ -379,8 +379,9 @@ export function predictBedtime(
     [hours, minutes] = customSchedule.bedtime.split(':').map(Number);
     bedtimeSource = 'custom schedule';
   }
-  // Priority 2: Use personal bedtime if available and no custom schedule
-  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 5) {
+  // Priority 2: Use personal bedtime if available, consistent, and no custom schedule
+  // Only use personal history if consistency is at least 60% (avoid using unreliable data)
+  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 5 && personalBedtime.consistency >= 0.6) {
     const personalWeight = Math.min(0.8, personalBedtime.sampleSize / 30);
     const ageWeight = 1 - personalWeight;
     
@@ -416,17 +417,22 @@ export function predictBedtime(
   if (customSchedule?.bedtime) {
     confidence = 0.85; // High confidence for manual configuration
     reasoning = `Custom bedtime (${customSchedule.bedtime})`;
-  } else if (personalBedtime.sampleSize >= 5) {
+  } else if (personalBedtime.sampleSize >= 5 && personalBedtime.consistency >= 0.4) {
+    // Using personal history with good consistency
     const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
     const consistencyBonus = personalBedtime.consistency * 0.3;
     confidence = 0.6 + sampleBonus + consistencyBonus;
     reasoning = `Personalized bedtime (${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`;
+  } else if (personalBedtime.sampleSize >= 5 && personalBedtime.consistency < 0.4) {
+    // Has data but too inconsistent to trust
+    confidence = 0.55;
+    reasoning = `Age-based bedtime: ${pattern.bedtime} (personal data too inconsistent: ${Math.round(personalBedtime.consistency * 100)}%)`;
   } else if (personalBedtime.sampleSize > 0) {
-    confidence = 0.65;
-    reasoning = `Limited bedtime data (${personalBedtime.sampleSize} samples) + age pattern`;
+    confidence = 0.6;
+    reasoning = `Age-based bedtime: ${pattern.bedtime} (limited data: ${personalBedtime.sampleSize} samples)`;
   } else {
     confidence = 0.5;
-    reasoning = `Age-based bedtime pattern: ${pattern.bedtime}`;
+    reasoning = `Age-based bedtime: ${pattern.bedtime} (no personal history)`;
   }
   
   if (todaysNaps.length > 0) {
