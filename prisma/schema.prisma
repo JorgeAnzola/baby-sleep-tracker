@@ -74,12 +74,14 @@ model BabySettings {
   babyId           String   @unique
   baby             Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
   
-  // Sleep schedule preferences
-  bedtime          String   // Time in HH:MM format
-  wakeTime         String   // Time in HH:MM format
+  // Sleep schedule preferences (formerly in User.scheduleConfig, now per-baby)
+  bedtime          String?  // Time in HH:MM format (e.g., "19:00")
+  wakeTime         String?  // Time in HH:MM format (e.g., "07:00")
   
-  // Nap settings
-  expectedNaps     Int      @default(2) // Expected number of naps per day based on age
+  // Full schedule configuration - previously stored per-user, now per-baby
+  napsPerDay       Int?     // Expected number of naps per day
+  wakeWindows      Json?    // Array of minutes for wake windows before each nap
+  napDurations     Json?    // Array of minutes for expected nap durations
   
   // Notification settings
   predictAlerts    Boolean  @default(true)

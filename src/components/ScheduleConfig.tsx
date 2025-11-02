@@ -18,39 +18,66 @@ import { useEffect, useState } from 'react';
 interface ScheduleConfigProps {
   birthDate: Date;
   sessions: SleepSession[];
+  babyId: string; // NEW: Need babyId to fetch/save baby-specific settings
 }
 
-export default function ScheduleConfig({ birthDate, sessions }: ScheduleConfigProps) {
+export default function ScheduleConfig({ birthDate, sessions, babyId }: ScheduleConfigProps) {
   const { t } = useLanguageStore();
-  const { scheduleConfig, setScheduleConfig } = useSleepStore();
+  const { babySettings, fetchBabySettings, updateBabySettings } = useSleepStore();
   const ageInDays = calculateBabyAge(birthDate);
+  
+  // Fetch baby-specific settings on mount or when babyId changes
+  useEffect(() => {
+    fetchBabySettings(babyId);
+  }, [babyId, fetchBabySettings]);
+  
+  // Get baby-specific settings (per-baby, not per-user)
+  const currentSettings = babySettings[babyId];
   
   // Initialize with age-based recommendations or stored config
   const recommended = getRecommendedScheduleForAge(ageInDays);
   
   const [napsPerDay, setNapsPerDay] = useState(
-    scheduleConfig?.napsPerDay ?? recommended.averageNaps
+    currentSettings?.napsPerDay ?? recommended.averageNaps
   );
   const [wakeWindows, setWakeWindows] = useState<number[]>(
-    scheduleConfig?.wakeWindows ?? recommended.awakeWindows
+    currentSettings?.wakeWindows ?? recommended.awakeWindows
   );
   const [napDurations, setNapDurations] = useState<number[]>(
-    scheduleConfig?.napDurations ?? recommended.napDurations
+    currentSettings?.napDurations ?? recommended.napDurations
   );
   const [showSuccess, setShowSuccess] = useState(false);
   const [bedtime, setBedtime] = useState(
-    scheduleConfig?.bedtime ?? recommended.bedtime
+    currentSettings?.bedtime ?? recommended.bedtime
   );
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Save to store whenever values change
+  // Update local state when baby settings are loaded from server (only once)
   useEffect(() => {
-    setScheduleConfig({
-      napsPerDay,
-      wakeWindows,
-      napDurations,
-      bedtime,
-    });
-  }, [napsPerDay, wakeWindows, napDurations, bedtime, setScheduleConfig]);
+    if (currentSettings && !isInitialized) {
+      if (currentSettings.napsPerDay !== null) setNapsPerDay(currentSettings.napsPerDay);
+      if (currentSettings.wakeWindows) setWakeWindows(currentSettings.wakeWindows);
+      if (currentSettings.napDurations) setNapDurations(currentSettings.napDurations);
+      if (currentSettings.bedtime) setBedtime(currentSettings.bedtime);
+      setIsInitialized(true);
+    }
+  }, [currentSettings, isInitialized]);
+  
+  // Save to backend whenever values change (debounced)
+  useEffect(() => {
+    if (!isInitialized) return; // Don't save during initialization
+    
+    const saveTimeout = setTimeout(() => {
+      updateBabySettings(babyId, {
+        napsPerDay,
+        wakeWindows,
+        napDurations,
+        bedtime,
+      }).catch(err => console.error('Failed to save baby settings:', err));
+    }, 1000); // Debounce 1 second
+    
+    return () => clearTimeout(saveTimeout);
+  }, [babyId, napsPerDay, wakeWindows, napDurations, bedtime, updateBabySettings, isInitialized]);
   
   const handleResetToAge = () => {
     const recommended = getRecommendedScheduleForAge(ageInDays);

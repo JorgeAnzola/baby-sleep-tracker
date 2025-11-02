@@ -420,6 +420,7 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
           {/* Schedule Configuration */}
           <div className="space-y-4">
             <ScheduleConfig 
+              babyId={babyId}
               birthDate={babyBirthDate}
               sessions={sessions}
             />

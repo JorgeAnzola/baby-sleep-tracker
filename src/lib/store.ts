@@ -36,6 +36,18 @@ export interface ScheduleConfig {
   bedtime?: string; // Optional, e.g. '19:00'
 }
 
+// Baby-specific settings (per-baby, not per-user)
+export interface BabySettings {
+  babyId: string;
+  bedtime: string | null;
+  wakeTime: string | null;
+  napsPerDay: number | null;
+  wakeWindows: number[] | null;
+  napDurations: number[] | null;
+  predictAlerts: boolean;
+  quietHours: boolean;
+}
+
 interface SleepStore {
   // Current baby
   currentBaby: Baby | null;
@@ -56,10 +68,16 @@ interface SleepStore {
   predictions: SleepPrediction[];
   setPredictions: (predictions: SleepPrediction[]) => void;
   
-  // Schedule configuration
+  // Baby-specific settings (NEW: per-baby instead of per-user)
+  babySettings: Record<string, BabySettings>; // Keyed by babyId
+  fetchBabySettings: (babyId: string) => Promise<void>;
+  updateBabySettings: (babyId: string, settings: Partial<BabySettings>) => Promise<void>;
+  getBabySettings: (babyId: string) => BabySettings | null;
+  
+  // DEPRECATED: Legacy per-user schedule config (kept for backward compatibility)
   scheduleConfig: ScheduleConfig | null;
   setScheduleConfig: (config: ScheduleConfig) => void;
-  syncScheduleConfig: () => Promise<void>; // Sync with backend
+  syncScheduleConfig: () => Promise<void>;
   
   // Timer state
   timerStartTime: Date | null;
@@ -112,7 +130,51 @@ export const useSleepStore = create<SleepStore>()(
       predictions: [],
       setPredictions: (predictions) => set({ predictions }),
       
-      // Schedule configuration
+      // Baby-specific settings (NEW: per-baby storage)
+      babySettings: {},
+      fetchBabySettings: async (babyId: string) => {
+        try {
+          const response = await fetch(`/api/baby-settings/${babyId}`);
+          if (response.ok) {
+            const settings = await response.json();
+            set((state) => ({
+              babySettings: {
+                ...state.babySettings,
+                [babyId]: settings,
+              },
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to fetch baby settings:', error);
+        }
+      },
+      updateBabySettings: async (babyId: string, updates: Partial<BabySettings>) => {
+        try {
+          const response = await fetch(`/api/baby-settings/${babyId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          });
+          if (response.ok) {
+            const updatedSettings = await response.json();
+            set((state) => ({
+              babySettings: {
+                ...state.babySettings,
+                [babyId]: updatedSettings,
+              },
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to update baby settings:', error);
+          throw error;
+        }
+      },
+      getBabySettings: (babyId: string) => {
+        const { babySettings } = useSleepStore.getState();
+        return babySettings[babyId] || null;
+      },
+      
+      // DEPRECATED: Legacy per-user schedule config
       scheduleConfig: null,
       setScheduleConfig: (config) => {
         set({ scheduleConfig: config });

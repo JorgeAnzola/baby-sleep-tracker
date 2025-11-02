@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Baby ID is required' }, { status: 400 });
     }
     
-    // Get baby information
+    // Get baby information and settings
     const baby = await prisma.baby.findUnique({
       where: { id: babyId },
       include: {
+        settings: true, // NEW: Get baby-specific settings
         user: {
           select: {
-            scheduleConfig: true
+            scheduleConfig: true // DEPRECATED: Keep for backward compatibility
           }
         }
       }
@@ -29,10 +30,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Baby not found' }, { status: 404 });
     }
     
-    // Parse schedule config from JSON
-    const scheduleConfig = baby.user.scheduleConfig ? 
-      (baby.user.scheduleConfig as { napsPerDay: number; wakeWindows: number[]; napDurations: number[]; bedtime?: string }) : 
-      null;
+    // Parse schedule config from BabySettings (NEW: per-baby) or User (DEPRECATED: per-user fallback)
+    let scheduleConfig = null;
+    if (baby.settings) {
+      // NEW: Use baby-specific settings (all collaborators see same config)
+      scheduleConfig = {
+        napsPerDay: baby.settings.napsPerDay ?? undefined,
+        wakeWindows: baby.settings.wakeWindows as number[] | undefined,
+        napDurations: baby.settings.napDurations as number[] | undefined,
+        bedtime: baby.settings.bedtime ?? undefined,
+      };
+    } else if (baby.user.scheduleConfig) {
+      // DEPRECATED: Fallback to user-specific config for backward compatibility
+      scheduleConfig = baby.user.scheduleConfig as { napsPerDay?: number; wakeWindows?: number[]; napDurations?: number[]; bedtime?: string };
+    }
     
     // Get recent sleep sessions (last 7 days)
     const recentSessions = await prisma.sleepSession.findMany({
