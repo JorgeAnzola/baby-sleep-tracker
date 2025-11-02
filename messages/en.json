@@ -1,0 +1,66 @@
+{
+  "nightWaking": {
+    "title": "Night Wakings",
+    "logWake": "Log Night Wake",
+    "backToSleep": "Back to Sleep",
+    "wakeTime": "Wake Time",
+    "duration": "Duration",
+    "interventionType": "Intervention",
+    "feedDetails": "Feed Details",
+    "notes": "Notes",
+    "tags": "Tags",
+    "summary": "Night Summary",
+    "totalWakings": "Total Wakings",
+    "longestStretch": "Longest Sleep Stretch",
+    "totalNightSleep": "Total Night Sleep",
+    "averageWakeDuration": "Avg Wake Duration",
+    "analytics": {
+      "title": "Night Waking Analytics",
+      "weeklyTrend": "Weekly Trend",
+      "interventionBreakdown": "Intervention Types",
+      "commonTags": "Common Reasons",
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "improvementTip": "Improvement detected! Keep up the good work.",
+      "concernTip": "Increasing wakings detected. Consider reviewing bedtime routine.",
+      "stable": "Sleep pattern is stable",
+      "improving": "Sleep quality improving",
+      "worsening": "More wakings than before"
+    },
+    "interventions": {
+      "FEED": "Feed",
+      "DIAPER": "Diaper Change",
+      "COMFORT": "Comfort",
+      "NONE": "Self-Soothed"
+    },
+    "feedTypes": {
+      "BOTTLE": "Bottle",
+      "BREAST": "Breast"
+    },
+    "units": {
+      "OZ": "oz",
+      "ML": "ml"
+    },
+    "commonTags": {
+      "hungry": "Hungry",
+      "teething": "Teething",
+      "scared": "Scared",
+      "wetDiaper": "Wet Diaper",
+      "dirtyDiaper": "Dirty Diaper",
+      "tooHot": "Too Hot",
+      "tooCold": "Too Cold",
+      "nightmare": "Nightmare",
+      "noise": "Noise"
+    },
+    "validation": {
+      "wakeTimeRequired": "Wake time is required",
+      "backToSleepAfterWake": "Back to sleep time must be after wake time",
+      "feedAmountRequired": "Feed amount is required when feed type is selected"
+    },
+    "success": {
+      "logged": "Night waking logged successfully",
+      "updated": "Night waking updated successfully",
+      "deleted": "Night waking deleted successfully"
+    }
+  }
+}

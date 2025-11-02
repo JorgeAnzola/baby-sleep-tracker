@@ -452,11 +452,23 @@ See `ADDING_LANGUAGES_AND_THEMES.md` for detailed guide.
 - Check `JWT_SECRET` is set
 - Verify cookie settings (httpOnly, secure in production)
 - Check middleware.ts is protecting correct routes
+- Use `verifyAuth(request)` helper in API routes
 
 **4. Predictions not updating**
 - Verify sessions are saving to database
 - Check `generatePredictions()` is called after changes
 - Log prediction function inputs for debugging
+
+**5. Prisma type errors after schema changes**
+- Run `npx prisma generate` to regenerate types
+- Use `(prisma as any).modelName` for models pending migration
+- Add eslint-disable comments for temporary type casts
+- Exclude migration scripts from tsconfig.json if they reference new schema fields
+
+**6. Next.js 16 "Property 'id' is missing in type 'Promise<>'" errors**
+- Update route handler signature: `{ params }: { params: Promise<{ id: string }> }`
+- Always `await params` before accessing properties
+- Apply to all dynamic route segments: `[id]`, `[babyId]`, `[sessionId]`, etc.
 
 ### Logging
 ```typescript
@@ -505,7 +517,60 @@ npx prisma studio
 - **v1.0.1**: One-command installation script
 - **v1.0.2**: Huckleberry CSV import feature documented
 - **v1.0.3**: Generic naming, English README
+- **v1.0.4**: Enhanced bedtime predictions with daily pattern analysis
+- **v1.0.5**: Context-aware bedtime adjustments based on nap patterns
+- **v1.0.6**: Baby-specific settings architecture
+  - **Critical Change**: Settings moved from per-user (`User.scheduleConfig`) to per-baby (`BabySettings` table)
+  - **Impact**: All collaborators now see identical settings for each baby
+  - **Migration Required**: Run `npx ts-node scripts/migrate-schedule-config.ts` after deployment
+  - **API Changes**: New `/api/baby-settings/[babyId]` endpoints with role-based access
+  - **Store Update**: Settings now keyed by `babyId`, not userId
+  - **Backward Compatibility**: Falls back to User.scheduleConfig if BabySettings not found
+  - **Next.js 16 Compatibility**: All dynamic routes updated for async params pattern
+  - **Authentication**: Added `verifyAuth(request)` helper for consistent API auth
 
 ---
 
 **For AI Agents**: This file provides complete context for understanding and modifying the NapGenius codebase. Always refer to this when making changes or adding features.
+
+## 🚨 Important v1.0.6 Deployment Notes
+
+### Pre-Deployment Checklist
+1. ✅ Backup database: `docker exec napgenius_postgres pg_dump -U napgenius napgenius > backup.sql`
+2. ✅ Commit all changes to git
+3. ✅ Review SETTINGS_MIGRATION_PLAN.md for detailed steps
+4. ✅ Verify local build passes: `npm run build`
+
+### Post-Deployment Steps (CRITICAL)
+```bash
+# 1. Run Prisma migration to add new fields
+docker exec -it napgenius_app npx prisma migrate deploy
+
+# 2. Regenerate Prisma types
+docker exec -it napgenius_app npx prisma generate
+
+# 3. Run data migration script (copies User.scheduleConfig to BabySettings)
+docker exec -it napgenius_app npx ts-node scripts/migrate-schedule-config.ts
+
+# 4. Verify migration success
+# Check that all babies have BabySettings entries with correct schedule data
+```
+
+### Rollback Procedure
+If issues occur after deployment:
+```bash
+# 1. Restore database from backup
+docker exec -i napgenius_postgres psql -U napgenius napgenius < backup.sql
+
+# 2. Revert to previous Docker image
+docker-compose -f docker-compose.public.yml down
+docker pull jorgeanzolaopropeza/napgenius:v1.0.5  # or last stable version
+docker-compose -f docker-compose.public.yml up -d
+```
+
+### Testing Multi-User Settings
+1. User A (owner) sets custom bedtime for Baby X to 19:00
+2. User B (collaborator) views Baby X settings
+3. **Expected**: User B sees bedtime 19:00 (same as User A)
+4. **Old behavior (v1.0.5)**: User B might see different bedtime from their own User.scheduleConfig
+5. **New behavior (v1.0.6)**: All users see identical baby-specific settings
