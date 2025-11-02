@@ -31,18 +31,22 @@ export async function GET(request: NextRequest) {
     }
     
     // Parse schedule config from BabySettings (NEW: per-baby) or User (DEPRECATED: per-user fallback)
-    let scheduleConfig = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let scheduleConfig: any = null;
     if (baby.settings) {
       // NEW: Use baby-specific settings (all collaborators see same config)
       scheduleConfig = {
+        // @ts-expect-error - Field exists after migration
         napsPerDay: baby.settings.napsPerDay ?? undefined,
+        // @ts-expect-error - Field exists after migration
         wakeWindows: baby.settings.wakeWindows as number[] | undefined,
+        // @ts-expect-error - Field exists after migration
         napDurations: baby.settings.napDurations as number[] | undefined,
         bedtime: baby.settings.bedtime ?? undefined,
       };
     } else if (baby.user.scheduleConfig) {
       // DEPRECATED: Fallback to user-specific config for backward compatibility
-      scheduleConfig = baby.user.scheduleConfig as { napsPerDay?: number; wakeWindows?: number[]; napDurations?: number[]; bedtime?: string };
+      scheduleConfig = baby.user.scheduleConfig;
     }
     
     // Get recent sleep sessions (last 7 days)

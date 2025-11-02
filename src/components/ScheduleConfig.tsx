@@ -73,7 +73,7 @@ export default function ScheduleConfig({ birthDate, sessions, babyId }: Schedule
         wakeWindows,
         napDurations,
         bedtime,
-      }).catch(err => console.error('Failed to save baby settings:', err));
+      }).catch((err: unknown) => console.error('Failed to save baby settings:', err));
     }, 1000); // Debounce 1 second
     
     return () => clearTimeout(saveTimeout);

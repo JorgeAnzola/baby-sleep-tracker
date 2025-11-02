@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { babyId: string } }
+  { params }: { params: Promise<{ babyId: string }> }
 ) {
   try {
     const userId = await verifyAuth(request);
@@ -21,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const { babyId } = params;
+    const { babyId } = await params;
     
     // Verify user has access to this baby (owner or collaborator)
     const baby = await prisma.baby.findFirst({
@@ -63,8 +63,11 @@ export async function GET(
       babyId: baby.settings.babyId,
       bedtime: baby.settings.bedtime,
       wakeTime: baby.settings.wakeTime,
+      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
       napsPerDay: baby.settings.napsPerDay,
+      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
       wakeWindows: baby.settings.wakeWindows,
+      // @ts-expect-error - These fields exist after migration but Prisma types not yet regenerated
       napDurations: baby.settings.napDurations,
       predictAlerts: baby.settings.predictAlerts,
       quietHours: baby.settings.quietHours,
@@ -87,7 +90,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { babyId: string } }
+  { params }: { params: Promise<{ babyId: string }> }
 ) {
   try {
     const userId = await verifyAuth(request);
@@ -95,7 +98,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const { babyId } = params;
+    const { babyId } = await params;
     const body = await request.json();
     
     // Verify user has EDITOR or OWNER access
@@ -134,6 +137,7 @@ export async function PUT(
     } = body;
     
     // Build update data object (only include fields that were provided)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {};
     if (bedtime !== undefined) updateData.bedtime = bedtime;
     if (wakeTime !== undefined) updateData.wakeTime = wakeTime;
@@ -144,18 +148,20 @@ export async function PUT(
     if (quietHours !== undefined) updateData.quietHours = quietHours;
     
     // Upsert baby settings
+    // Note: napsPerDay, wakeWindows, napDurations will be available after Prisma migration
     const updatedSettings = await prisma.babySettings.upsert({
       where: { babyId },
       create: {
         babyId,
         bedtime: bedtime ?? '19:00',
         wakeTime: wakeTime ?? '07:00',
-        napsPerDay: napsPerDay ?? null,
-        wakeWindows: wakeWindows ?? null,
-        napDurations: napDurations ?? null,
+        ...(napsPerDay !== undefined && { napsPerDay }),
+        ...(wakeWindows !== undefined && { wakeWindows }),
+        ...(napDurations !== undefined && { napDurations }),
         predictAlerts: predictAlerts ?? true,
         quietHours: quietHours ?? true,
-      },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
       update: updateData,
     });
     

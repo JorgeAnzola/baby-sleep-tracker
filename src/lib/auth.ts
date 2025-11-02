@@ -92,3 +92,24 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next();
   }
 }
+
+/**
+ * Verify authentication from request and return userId
+ * Returns null if not authenticated
+ * Used in API routes for authentication checks
+ */
+export async function verifyAuth(request: NextRequest): Promise<string | null> {
+  const token = request.cookies.get('session')?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try { 
+    const { payload } = await jwtVerify(token, secretKey);
+    return payload.userId as string;
+  } catch (error) {
+    console.error('Failed to verify auth:', error);
+    return null;
+  }
+}

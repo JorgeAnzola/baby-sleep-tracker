@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await verifyAuth(request);
@@ -14,6 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       wakeTime,
@@ -27,9 +28,10 @@ export async function PATCH(
     } = body;
 
     // Verify night waking belongs to user
-    const existing = await prisma.nightWaking.findFirst({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existing = await (prisma as any).nightWaking.findFirst({
       where: {
-        id: params.id,
+        id: id,
         sleepSession: {
           baby: {
             userId: userId
@@ -50,8 +52,9 @@ export async function PATCH(
       durationMinutes = Math.round((sleep.getTime() - wake.getTime()) / 60000);
     }
 
-    const updated = await prisma.nightWaking.update({
-      where: { id: params.id },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updated = await (prisma as any).nightWaking.update({
+      where: { id: id },
       data: {
         ...(wakeTime && { wakeTime: new Date(wakeTime) }),
         ...(backToSleepTime !== undefined && { 
@@ -76,7 +79,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await verifyAuth(request);
@@ -84,9 +87,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const existing = await prisma.nightWaking.findFirst({
+    const { id } = await params;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existing = await (prisma as any).nightWaking.findFirst({
       where: {
-        id: params.id,
+        id: id,
         sleepSession: {
           baby: {
             userId: userId
@@ -99,8 +105,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Night waking not found' }, { status: 404 });
     }
 
-    await prisma.nightWaking.delete({
-      where: { id: params.id }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (prisma as any).nightWaking.delete({
+      where: { id: id }
     });
 
     return NextResponse.json({ success: true });

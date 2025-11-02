@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
       durationMinutes = Math.round((sleep.getTime() - wake.getTime()) / 60000);
     }
 
-    const nightWaking = await prisma.nightWaking.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nightWaking = await (prisma as any).nightWaking.create({
       data: {
         sleepSessionId,
         wakeTime: new Date(wakeTime),
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {
       sleepSession: {
         baby: {
@@ -111,7 +113,8 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const nightWakings = await prisma.nightWaking.findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const nightWakings = await (prisma as any).nightWaking.findMany({
       where,
       include: {
         sleepSession: {

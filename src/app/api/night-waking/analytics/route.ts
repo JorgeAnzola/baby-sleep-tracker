@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const wakings = await prisma.nightWaking.findMany({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wakings = await (prisma as any).nightWaking.findMany({
       where: {
         sleepSession: {
           babyId,

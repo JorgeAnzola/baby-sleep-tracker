@@ -410,8 +410,8 @@ export default function Home() {
     if (!currentBaby) return;
 
     const sessions = sleepSessions
-      .filter(s => s.babyId === currentBaby.id)
-      .map(s => ({
+      .filter((s: SleepSession) => s.babyId === currentBaby.id)
+      .map((s: SleepSession) => ({
         startTime: s.startTime,
         endTime: s.endTime,
         sleepType: s.sleepType as 'NAP' | 'NIGHTTIME'
@@ -583,7 +583,7 @@ export default function Home() {
               babyBirthDate={currentBaby.birthDate}
               onImportComplete={handleImportComplete}
               onBabyUpdate={handleBabyUpdate}
-              sessions={sleepSessions.filter(s => s.babyId === currentBaby.id)}
+              sessions={sleepSessions.filter((s: SleepSession) => s.babyId === currentBaby.id)}
               isOwner={currentBaby.isOwner !== false}
             />
           </div>
@@ -652,8 +652,8 @@ export default function Home() {
             ) : (
               <SleepHistory 
                 sessions={sleepSessions
-                  .filter(s => s.babyId === currentBaby.id && s.endTime)
-                  .sort((a, b) => {
+                  .filter((s: SleepSession) => s.babyId === currentBaby.id && s.endTime)
+                  .sort((a: SleepSession, b: SleepSession) => {
                     const aTime = a.startTime instanceof Date ? a.startTime.getTime() : new Date(a.startTime).getTime();
                     const bTime = b.startTime instanceof Date ? b.startTime.getTime() : new Date(b.startTime).getTime();
                     return bTime - aTime;
@@ -673,8 +673,8 @@ export default function Home() {
           ) : (
             <SleepHistory 
               sessions={sleepSessions
-                .filter(s => s.babyId === currentBaby.id && s.endTime)
-                .sort((a, b) => {
+                .filter((s: SleepSession) => s.babyId === currentBaby.id && s.endTime)
+                .sort((a: SleepSession, b: SleepSession) => {
                   const aTime = a.startTime instanceof Date ? a.startTime.getTime() : new Date(a.startTime).getTime();
                   const bTime = b.startTime instanceof Date ? b.startTime.getTime() : new Date(b.startTime).getTime();
                   return bTime - aTime;

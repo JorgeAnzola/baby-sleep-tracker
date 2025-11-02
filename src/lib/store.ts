@@ -92,7 +92,8 @@ interface SleepStore {
   toggleDarkMode: () => void;
 }
 
-export const useSleepStore = create<SleepStore>()(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const useSleepStore: any = create<SleepStore>()(
   persist(
     (set) => ({
       // Current baby

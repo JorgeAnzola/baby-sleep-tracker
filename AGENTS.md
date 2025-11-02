@@ -4,10 +4,10 @@ This document provides guidance for AI agents working on the NapGenius Baby Slee
 
 ## 📋 Project Overview
 
-**NapGenius** is a Next.js 15 web application for tracking baby sleep patterns with intelligent predictions and Home Assistant integration.
+**NapGenius** is a Next.js 16 web application for tracking baby sleep patterns with intelligent predictions and Home Assistant integration.
 
 ### Core Technologies
-- **Frontend**: Next.js 15, TypeScript, React, Tailwind CSS
+- **Frontend**: Next.js 16 (Turbopack), TypeScript, React, Tailwind CSS
 - **Backend**: Next.js API Routes, Prisma ORM
 - **Database**: PostgreSQL 16
 - **Authentication**: JWT with jose library, bcryptjs
@@ -25,7 +25,9 @@ baby-sleep-tracker/
 │   │   ├── api/              # API routes
 │   │   │   ├── auth/         # Authentication endpoints
 │   │   │   ├── babies/       # Baby management
+│   │   │   ├── baby-settings/ # Baby-specific settings (v1.0.6+)
 │   │   │   ├── import-csv/   # Huckleberry CSV import
+│   │   │   ├── night-waking/ # Night waking tracking (planned)
 │   │   │   └── sleep-session/ # Sleep tracking
 │   │   ├── login/            # Login page
 │   │   ├── register/         # Registration page
@@ -38,20 +40,22 @@ baby-sleep-tracker/
 │   │   ├── Settings.tsx      # Settings panel
 │   │   ├── SleepHistory.tsx  # Session history
 │   │   ├── SleepPredictions.tsx # AI predictions display
-│   │   └── SleepTimer.tsx    # Main sleep timer
+│   │   ├── SleepTimer.tsx    # Main sleep timer
+│   │   └── ScheduleConfig.tsx # Baby schedule configuration
 │   ├── lib/
-│   │   ├── i18n/             # Internationalization
-│   │   ├── auth.ts           # JWT utilities
+│   │   ├── auth.ts           # JWT utilities + verifyAuth helper
 │   │   ├── sleep-predictions.ts # Prediction algorithms
 │   │   ├── store.ts          # Zustand global state
-│   │   └── theme-store.ts    # Theme management
+│   │   ├── theme-store.ts    # Theme management
+│   │   └── language-store.ts # i18n language store
 │   └── middleware.ts         # Auth middleware
 ├── prisma/
 │   └── schema.prisma         # Database schema
 ├── public/                   # Static assets
 ├── scripts/
 │   ├── build-and-push.sh    # Docker build/push script
-│   └── docker-entrypoint.sh # Container startup
+│   ├── docker-entrypoint.sh # Container startup
+│   └── migrate-schedule-config.ts # Data migration script (v1.0.6)
 ├── docker-compose.yml        # Local development
 ├── docker-compose.public.yml # Production deployment
 ├── Dockerfile               # Multi-stage Docker build
@@ -71,17 +75,23 @@ baby-sleep-tracker/
 - Middleware protects routes (`/api/*`, `/`, etc.)
 - Public routes: `/login`, `/register`
 - Token validation on every request
+- `verifyAuth(request)` helper returns userId or null
 
 #### 3. **State Management**
-- **Zustand** for client state (sleep sessions, timer, current baby)
+- **Zustand** for client state (sleep sessions, timer, current baby, baby-specific settings)
 - **localStorage** persistence for offline capability
 - Server state fetched on mount, synced via API
+- **Per-baby settings** stored in `babySettings` keyed by babyId (v1.0.6+)
 
 #### 4. **Database Access**
 - **Prisma ORM** for all database operations
 - Connection pooling handled by Prisma
 - Migrations in `prisma/migrations/`
 - Schema in `prisma/schema.prisma`
+
+#### 5. **Next.js 16 Route Handlers**
+- Dynamic route params are **Promises** that must be `await`ed
+- Example: `async function GET(req, { params }: { params: Promise<{ id: string }> }) { const { id } = await params; }`
 
 ## 🎯 Core Features
 
@@ -191,7 +201,46 @@ Three prediction functions:
 3. Middleware validates token on protected routes
 4. Logout: `POST /api/auth/logout` → Clears cookie
 
-### 5. Home Assistant Integration
+### 5. Baby-Specific Settings (v1.0.6+)
+**Files**: `src/app/api/baby-settings/[babyId]/route.ts`, `src/components/ScheduleConfig.tsx`, `scripts/migrate-schedule-config.ts`
+
+**Critical Architecture Change**: Settings moved from per-user (`User.scheduleConfig`) to per-baby (`BabySettings` table) to ensure all collaborators viewing the same baby see identical schedule settings.
+
+**Key Features**:
+- Per-baby schedule configuration (napsPerDay, wakeWindows, napDurations, bedtime)
+- All collaborators see the same settings for each baby
+- User preferences (theme, language) remain per-user
+- Automatic debounced save (1 second delay)
+- Fallback to User.scheduleConfig for backward compatibility
+
+**API Endpoints**:
+```typescript
+// Get baby-specific settings
+GET /api/baby-settings/[babyId]
+// Returns: { babyId, bedtime, wakeTime, napsPerDay, wakeWindows, napDurations, predictAlerts, quietHours }
+
+// Update baby-specific settings (requires OWNER or EDITOR role)
+PUT /api/baby-settings/[babyId]
+// Body: { bedtime?, wakeTime?, napsPerDay?, wakeWindows?, napDurations?, predictAlerts?, quietHours? }
+```
+
+**Data Migration**:
+- Run `npx ts-node scripts/migrate-schedule-config.ts` to migrate existing User.scheduleConfig to BabySettings
+- Script copies owner's scheduleConfig to baby's settings table
+- User.scheduleConfig kept for backward compatibility but deprecated
+
+**Store Integration**:
+```typescript
+// In store.ts
+babySettings: Record<string, BabySettings>; // Keyed by babyId
+fetchBabySettings: (babyId: string) => Promise<void>;
+updateBabySettings: (babyId: string, settings: Partial<BabySettings>) => Promise<void>;
+getBabySettings: (babyId: string) => BabySettings | null;
+```
+
+**Important**: When making predictions, always use baby-specific settings from `babySettings[babyId]`, not user preferences.
+
+### 6. Home Assistant Integration
 **File**: `src/app/api/sleep-status/route.ts`
 
 REST API for home automation:
@@ -212,7 +261,7 @@ GET /api/sleep-status?babyId={id}
 
 ### Adding New Features
 
-#### 1. **New API Endpoint**
+#### 1. **New API Endpoint (Next.js 16)**
 ```typescript
 // src/app/api/your-endpoint/route.ts
 import { NextRequest, NextResponse } from 'next/server';
@@ -221,8 +270,29 @@ import { verifyAuth } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+// Note: params is a Promise in Next.js 16
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const userId = await verifyAuth(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  const { id } = await params; // IMPORTANT: Must await params
+  
+  // Your logic here
+  return NextResponse.json({ data: 'response' });
+}
+```
+
+#### 2. **New Component**
+```typescript
+// src/components/YourComponent.tsx
+'use client';
+
+import { useState } from 'react';
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
