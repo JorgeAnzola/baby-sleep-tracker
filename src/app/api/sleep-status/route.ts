@@ -15,12 +15,24 @@ export async function GET(request: NextRequest) {
     
     // Get baby information
     const baby = await prisma.baby.findUnique({
-      where: { id: babyId }
+      where: { id: babyId },
+      include: {
+        user: {
+          select: {
+            scheduleConfig: true
+          }
+        }
+      }
     });
     
     if (!baby) {
       return NextResponse.json({ error: 'Baby not found' }, { status: 404 });
     }
+    
+    // Parse schedule config from JSON
+    const scheduleConfig = baby.user.scheduleConfig ? 
+      (baby.user.scheduleConfig as { napsPerDay: number; wakeWindows: number[]; napDurations: number[]; bedtime?: string }) : 
+      null;
     
     // Get recent sleep sessions (last 7 days)
     const recentSessions = await prisma.sleepSession.findMany({
@@ -49,8 +61,8 @@ export async function GET(request: NextRequest) {
     }));
     
     // Generate predictions
-    const nextNap = predictNextNap(baby.birthDate, sessions);
-    const bedtime = predictBedtime(baby.birthDate, sessions);
+    const nextNap = predictNextNap(baby.birthDate, sessions, new Date(), scheduleConfig);
+    const bedtime = predictBedtime(baby.birthDate, sessions, new Date(), scheduleConfig);
     
     // Calculate sleep state
     const now = new Date();

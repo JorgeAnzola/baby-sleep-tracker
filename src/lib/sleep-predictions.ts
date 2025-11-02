@@ -347,10 +347,18 @@ function analyzePersonalBedtimePatterns(
   };
 }
 
+export interface CustomSchedule {
+  napsPerDay: number;
+  wakeWindows: number[];
+  napDurations: number[];
+  bedtime?: string; // Optional, e.g. '19:00'
+}
+
 export function predictBedtime(
   birthDate: Date,
   allSessions: SleepSession[],
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  customSchedule?: CustomSchedule | null
 ): {
   predictedTime: Date;
   confidence: number;
@@ -364,9 +372,15 @@ export function predictBedtime(
   
   // Create bedtime for today
   let [hours, minutes] = pattern.bedtime.split(':').map(Number);
+  let bedtimeSource = 'age pattern';
   
-  // Use personal bedtime if available
-  if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 5) {
+  // Priority 1: Use custom schedule bedtime if provided
+  if (customSchedule?.bedtime) {
+    [hours, minutes] = customSchedule.bedtime.split(':').map(Number);
+    bedtimeSource = 'custom schedule';
+  }
+  // Priority 2: Use personal bedtime if available and no custom schedule
+  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 5) {
     const personalWeight = Math.min(0.8, personalBedtime.sampleSize / 30);
     const ageWeight = 1 - personalWeight;
     
@@ -376,6 +390,7 @@ export function predictBedtime(
     const finalTotalMins = Math.round((personalTotalMins * personalWeight) + (ageTotalMins * ageWeight));
     hours = Math.floor(finalTotalMins / 60);
     minutes = finalTotalMins % 60;
+    bedtimeSource = 'personal history';
   }
   
   const predictedBedtime = new Date(currentTime);
@@ -397,8 +412,11 @@ export function predictBedtime(
   let adjustment = 0;
   let reasoning = '';
   
-  // Calculate confidence based on personal data
-  if (personalBedtime.sampleSize >= 5) {
+  // Calculate confidence based on data source and quality
+  if (customSchedule?.bedtime) {
+    confidence = 0.85; // High confidence for manual configuration
+    reasoning = `Custom bedtime (${customSchedule.bedtime})`;
+  } else if (personalBedtime.sampleSize >= 5) {
     const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
     const consistencyBonus = personalBedtime.consistency * 0.3;
     confidence = 0.6 + sampleBonus + consistencyBonus;

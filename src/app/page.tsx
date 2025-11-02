@@ -438,7 +438,7 @@ export default function Home() {
     } else {
       // Baby is awake, predict next nap and bedtime
       const nextNap = predictNextNap(currentBaby.birthDate, sessions, new Date(), scheduleConfig);
-      const bedtime = predictBedtime(currentBaby.birthDate, sessions);
+      const bedtime = predictBedtime(currentBaby.birthDate, sessions, new Date(), scheduleConfig);
 
       const newPredictions = [
         {
