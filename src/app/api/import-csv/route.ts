@@ -35,7 +35,13 @@ function parseHuckleberryDateTime(dateTime: string): Date | null {
     const [datePart, timePart] = dateTime.split(' ');
     if (!datePart || !timePart) return null;
     
-    return new Date(`${datePart}T${timePart}:00`);
+    // Parse as local time (Europe/Madrid timezone)
+    // The dates in Huckleberry CSV are in local time, not UTC
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    // Create date in local timezone
+    return new Date(year, month - 1, day, hours, minutes, 0, 0);
   } catch (error) {
     console.error('Error parsing date:', dateTime, error);
     return null;
