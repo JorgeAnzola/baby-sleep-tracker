@@ -386,28 +386,162 @@ export function predictBedtime(
   // Analyze personal bedtime patterns
   const personalBedtime = analyzePersonalBedtimePatterns(allSessions);
   
-  // Create bedtime for today
-  let [hours, minutes] = pattern.bedtime.split(':').map(Number);
-  let bedtimeSource = 'age pattern';
+  // Get base bedtime from custom schedule or age pattern
+  let baseBedtime: string;
+  let usingCustomSchedule = false;
   
-  // Priority 1: Use custom schedule bedtime if provided
   if (customSchedule?.bedtime) {
-    [hours, minutes] = customSchedule.bedtime.split(':').map(Number);
-    bedtimeSource = 'custom schedule';
+    baseBedtime = customSchedule.bedtime;
+    usingCustomSchedule = true;
+  } else {
+    baseBedtime = pattern.bedtime;
   }
-  // Priority 2: Use personal bedtime if available, consistent, and no custom schedule
-  // Lowered thresholds: 7+ samples and 40% consistency (was 15 samples and 60%)
-  else if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
-    const personalWeight = Math.min(0.8, personalBedtime.sampleSize / 30);
-    const ageWeight = 1 - personalWeight;
+  
+  let [hours, minutes] = baseBedtime.split(':').map(Number);
+  let baseTotalMins = hours * 60 + minutes;
+  
+  // Blend with personal history if available
+  if (personalBedtime.averageBedtime && personalBedtime.sampleSize >= 3) {
+    const personalWeight = Math.min(0.7, personalBedtime.sampleSize / 30); // Max 70% weight
+    const baseWeight = 1 - personalWeight;
     
     const personalTotalMins = personalBedtime.averageBedtime.hours * 60 + personalBedtime.averageBedtime.minutes;
-    const ageTotalMins = hours * 60 + minutes;
+    baseTotalMins = Math.round((personalTotalMins * personalWeight) + (baseTotalMins * baseWeight));
+  }
+  
+  // Analyze today's wake/sleep patterns
+  const todaysNaps = allSessions.filter(s => 
+    s.startTime.toDateString() === currentTime.toDateString() && 
+    s.sleepType === 'NAP' &&
+    s.endTime
+  );
+  
+  // Find last wake time (end of last nap or last nighttime sleep)
+  const lastSleep = allSessions
+    .filter(s => s.endTime)
+    .sort((a, b) => {
+      const aTime = a.endTime instanceof Date ? a.endTime.getTime() : new Date(a.endTime!).getTime();
+      const bTime = b.endTime instanceof Date ? b.endTime.getTime() : new Date(b.endTime!).getTime();
+      return bTime - aTime;
+    })[0];
+  
+  let adjustment = 0;
+  let confidence = 0.6;
+  const reasoningParts: string[] = [];
+  
+  // Calculate base confidence from data sources
+  if (usingCustomSchedule && personalBedtime.sampleSize >= 3) {
+    const sampleBonus = Math.min(0.2, personalBedtime.sampleSize / 50);
+    const consistencyBonus = personalBedtime.consistency * 0.25;
+    confidence = 0.7 + sampleBonus + consistencyBonus;
+    reasoningParts.push(`Blended (custom ${customSchedule!.bedtime} + ${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`);
+  } else if (personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
+    const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
+    const consistencyBonus = personalBedtime.consistency * 0.3;
+    confidence = 0.6 + sampleBonus + consistencyBonus;
+    reasoningParts.push(`Personalized (${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`);
+  } else if (usingCustomSchedule) {
+    confidence = 0.75;
+    reasoningParts.push(`Custom bedtime (${customSchedule!.bedtime})`);
+  } else {
+    confidence = 0.55;
+    reasoningParts.push(`Age-based (${pattern.bedtime})`);
+    if (personalBedtime.sampleSize > 0) {
+      reasoningParts.push(`${personalBedtime.sampleSize} samples available`);
+    }
+  }
+  
+  // Adjust based on today's nap count
+  const expectedNaps = customSchedule?.napsPerDay || pattern.averageNaps;
+  const napCountDiff = todaysNaps.length - expectedNaps;
+  
+  if (napCountDiff < 0) {
+    // Fewer naps than expected - bedtime should be earlier
+    adjustment -= 15 * Math.abs(napCountDiff);
+    reasoningParts.push(`${Math.abs(napCountDiff)} fewer nap${Math.abs(napCountDiff) > 1 ? 's' : ''} (-${Math.abs(adjustment)}min)`);
+  } else if (napCountDiff > 0) {
+    // More naps than expected - bedtime might be later
+    adjustment += 10 * napCountDiff;
+    reasoningParts.push(`${napCountDiff} extra nap${napCountDiff > 1 ? 's' : ''} (+${10 * napCountDiff}min)`);
+  }
+  
+  // Check total nap duration vs expected
+  if (todaysNaps.length > 0) {
+    const totalNapDuration = todaysNaps.reduce((total, nap) => {
+      if (nap.endTime) {
+        const napStart = nap.startTime instanceof Date ? nap.startTime : new Date(nap.startTime);
+        const napEnd = nap.endTime instanceof Date ? nap.endTime : new Date(nap.endTime);
+        return total + differenceInMinutes(napEnd, napStart);
+      }
+      return total;
+    }, 0);
     
-    const finalTotalMins = Math.round((personalTotalMins * personalWeight) + (ageTotalMins * ageWeight));
-    hours = Math.floor(finalTotalMins / 60);
-    minutes = finalTotalMins % 60;
-    bedtimeSource = 'personal history';
+    const expectedTotalNapDuration = (customSchedule?.napDurations || pattern.napDurations)
+      .slice(0, expectedNaps)
+      .reduce((sum, d) => sum + d, 0);
+    
+    const durationDiff = totalNapDuration - expectedTotalNapDuration;
+    
+    if (Math.abs(durationDiff) > 30) {
+      if (durationDiff > 0) {
+        // Slept more than expected during naps - push bedtime later
+        adjustment += Math.min(30, Math.round(durationDiff / 3));
+        reasoningParts.push(`+${Math.round((totalNapDuration - expectedTotalNapDuration) / 60 * 10) / 10}h naps (+${Math.round(durationDiff / 3)}min)`);
+      } else {
+        // Slept less than expected - pull bedtime earlier
+        adjustment += Math.max(-30, Math.round(durationDiff / 3));
+        reasoningParts.push(`${Math.round((totalNapDuration - expectedTotalNapDuration) / 60 * 10) / 10}h naps (${Math.round(durationDiff / 3)}min)`);
+      }
+    }
+    
+    // Check last nap timing
+    const lastNap = todaysNaps.sort((a, b) => {
+      const aTime = a.endTime instanceof Date ? a.endTime.getTime() : new Date(a.endTime!).getTime();
+      const bTime = b.endTime instanceof Date ? b.endTime.getTime() : new Date(b.endTime!).getTime();
+      return bTime - aTime;
+    })[0];
+    
+    if (lastNap && lastNap.endTime) {
+      const lastNapEnd = lastNap.endTime instanceof Date ? lastNap.endTime : new Date(lastNap.endTime);
+      const expectedBedtime = new Date(currentTime);
+      expectedBedtime.setHours(Math.floor(baseTotalMins / 60), baseTotalMins % 60, 0, 0);
+      
+      const timeSinceLastNap = differenceInMinutes(expectedBedtime, lastNapEnd);
+      
+      // Typical last wake window before bed is 3-5 hours depending on age
+      const expectedLastWindow = ageInDays < 180 ? 180 : ageInDays < 365 ? 240 : 300;
+      
+      if (timeSinceLastNap < expectedLastWindow - 60) {
+        // Last nap ended recently - push bedtime later
+        const pushAmount = Math.min(30, Math.round((expectedLastWindow - timeSinceLastNap) / 3));
+        adjustment += pushAmount;
+        reasoningParts.push(`Last nap recent (+${pushAmount}min)`);
+        confidence = Math.max(0.5, confidence - 0.1);
+      }
+    }
+  } else if (lastSleep && lastSleep.endTime) {
+    // No naps today - check if wake window is too long
+    const lastWakeTime = lastSleep.endTime instanceof Date ? lastSleep.endTime : new Date(lastSleep.endTime);
+    const minutesAwake = differenceInMinutes(currentTime, lastWakeTime);
+    
+    // If baby has been awake for a very long time, suggest earlier bedtime
+    if (minutesAwake > 480) { // 8+ hours awake
+      adjustment -= 30;
+      reasoningParts.push(`No naps, ${Math.round(minutesAwake / 60 * 10) / 10}h awake (-30min)`);
+      confidence = Math.max(0.6, confidence - 0.05);
+    }
+  }
+  
+  // Apply adjustments to base bedtime
+  const finalTotalMins = baseTotalMins + adjustment;
+  hours = Math.floor(finalTotalMins / 60);
+  minutes = finalTotalMins % 60;
+  
+  // Handle hour overflow (e.g., 24:30 -> 00:30 next day)
+  if (hours >= 24) {
+    hours -= 24;
+  } else if (hours < 0) {
+    hours += 24;
   }
   
   const predictedBedtime = new Date(currentTime);
@@ -418,76 +552,10 @@ export function predictBedtime(
     predictedBedtime.setDate(predictedBedtime.getDate() + 1);
   }
   
-  // Adjust based on today's nap patterns
-  const todaysNaps = allSessions.filter(s => 
-    s.startTime.toDateString() === currentTime.toDateString() && 
-    s.sleepType === 'NAP' &&
-    s.endTime
-  );
-  
-  let confidence = 0.6; // Base confidence
-  let adjustment = 0;
-  let reasoning = '';
-  
-  // Calculate confidence based on data source and quality
-  if (customSchedule?.bedtime) {
-    confidence = 0.85; // High confidence for manual configuration
-    reasoning = `Custom bedtime (${customSchedule.bedtime})`;
-  } else if (personalBedtime.sampleSize >= 7 && personalBedtime.consistency >= 0.4) {
-    // Using personal history with acceptable consistency
-    const sampleBonus = Math.min(0.25, personalBedtime.sampleSize / 40);
-    const consistencyBonus = personalBedtime.consistency * 0.3;
-    confidence = 0.6 + sampleBonus + consistencyBonus;
-    reasoning = `Personalized bedtime (${personalBedtime.sampleSize} samples, ${Math.round(personalBedtime.consistency * 100)}% consistent)`;
-  } else if (personalBedtime.sampleSize >= 3 && personalBedtime.consistency < 0.4) {
-    // Has data but too inconsistent to trust
-    confidence = 0.55;
-    reasoning = `Age-based bedtime: ${pattern.bedtime} (personal data too inconsistent: ${Math.round(personalBedtime.consistency * 100)}%)`;
-  } else if (personalBedtime.sampleSize > 0) {
-    confidence = 0.6;
-    reasoning = `Age-based bedtime: ${pattern.bedtime} (limited data: ${personalBedtime.sampleSize} samples)`;
-  } else {
-    confidence = 0.5;
-    reasoning = `Age-based bedtime: ${pattern.bedtime} (no personal history)`;
-  }
-  
-  if (todaysNaps.length > 0) {
-    const lastNap = todaysNaps.sort((a, b) => {
-      const aTime = a.endTime instanceof Date ? a.endTime.getTime() : new Date(a.endTime!).getTime();
-      const bTime = b.endTime instanceof Date ? b.endTime.getTime() : new Date(b.endTime!).getTime();
-      return bTime - aTime;
-    })[0];
-    const lastNapEnd = lastNap.endTime instanceof Date ? lastNap.endTime : new Date(lastNap.endTime!);
-    const timeSinceLastNap = differenceInMinutes(predictedBedtime, lastNapEnd);
-    
-    // If last nap was too late or too long, adjust bedtime
-    if (timeSinceLastNap < 180) { // Less than 3 hours
-      adjustment = 30; // Push bedtime later
-      confidence = Math.max(0.4, confidence - 0.1);
-      reasoning += ` (adjusted +30min due to late nap)`;
-    }
-    
-    // Check for total nap duration impact
-    const totalNapDuration = todaysNaps.reduce((total, nap) => {
-      if (nap.endTime) {
-        const napStart = nap.startTime instanceof Date ? nap.startTime : new Date(nap.startTime);
-        const napEnd = nap.endTime instanceof Date ? nap.endTime : new Date(nap.endTime);
-        return total + differenceInMinutes(napEnd, napStart);
-      }
-      return total;
-    }, 0);
-    
-    if (totalNapDuration > 240) { // More than 4 hours of naps
-      adjustment += 15; // Push bedtime later
-      confidence = Math.max(0.4, confidence - 0.05);
-      reasoning += ` (${Math.round(totalNapDuration/60 * 10)/10}h total naps)`;
-    }
-  }
-  
   return {
-    predictedTime: addMinutes(predictedBedtime, adjustment),
+    predictedTime: predictedBedtime,
     confidence: Math.round(confidence * 100) / 100,
-    reasoning
+    reasoning: reasoningParts.join(' • ')
   };
 }
 
