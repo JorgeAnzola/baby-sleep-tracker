@@ -307,6 +307,10 @@ function analyzePersonalBedtimePatterns(
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 60);
   
+  console.log('🔍 analyzePersonalBedtimePatterns DEBUG:');
+  console.log('  Total sessions:', sessions.length);
+  console.log('  Cutoff date:', cutoffDate.toISOString());
+  
   const nighttimeSessions = sessions
     .filter(s => 
       s.sleepType === 'NIGHTTIME' && 
@@ -323,6 +327,12 @@ function analyzePersonalBedtimePatterns(
       };
     });
 
+  console.log('  Filtered nighttime sessions:', nighttimeSessions.length);
+  if (nighttimeSessions.length > 0) {
+    const times = nighttimeSessions.slice(0, 5).map(s => `${s.hours}:${s.minutes.toString().padStart(2, '0')}`);
+    console.log('  Sample bedtimes:', times.join(', '));
+  }
+
   if (nighttimeSessions.length === 0) {
     return { averageBedtime: null, consistency: 0, sampleSize: 0 };
   }
@@ -331,6 +341,8 @@ function analyzePersonalBedtimePatterns(
   const avgTotalMinutes = nighttimeSessions.reduce((sum, bt) => sum + bt.totalMinutes, 0) / nighttimeSessions.length;
   const avgHours = Math.floor(avgTotalMinutes / 60);
   const avgMinutes = Math.round(avgTotalMinutes % 60);
+  
+  console.log('  Calculated average:', `${avgHours}:${avgMinutes.toString().padStart(2, '0')}`);
 
   // Calculate consistency (based on standard deviation)
   const stdDev = Math.sqrt(
