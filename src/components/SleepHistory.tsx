@@ -8,8 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useLanguageStore } from '@/lib/i18n/language-store';
 import { formatDuration } from '@/lib/sleep-predictions';
 import { useThemeStore } from '@/lib/theme-store';
-import { Clock, Edit3, Moon, Sun, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, Clock, Edit3, Moon, Sun, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+interface NightWaking {
+  id: string;
+  wakeTime: string;
+  sleepTime?: string | null;
+  durationMinutes?: number | null;
+  interventionType: string;
+  selfSoothed: boolean;
+}
 
 interface SleepSession {
   id: string;
@@ -34,6 +43,7 @@ export function SleepHistory({ sessions, onEditSession, onDeleteSession, classNa
   const [editingSession, setEditingSession] = useState<SleepSession | null>(null);
   const [editStartTime, setEditStartTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  const [nightWakings, setNightWakings] = useState<Record<string, NightWaking[]>>({});
   
   const { t } = useLanguageStore();
   const { getThemeConfig } = useThemeStore();
@@ -47,6 +57,29 @@ export function SleepHistory({ sessions, onEditSession, onDeleteSession, classNa
     }
     return acc;
   }, [] as SleepSession[]);
+
+  // Fetch night wakings for NIGHTTIME sessions
+  useEffect(() => {
+    const fetchNightWakings = async () => {
+      const nighttimeSessions = uniqueSessions.filter(s => s.sleepType === 'NIGHTTIME' && s.endTime);
+      
+      for (const session of nighttimeSessions) {
+        try {
+          const response = await fetch(`/api/night-waking?sleepSessionId=${session.id}`);
+          if (response.ok) {
+            const wakings = await response.json();
+            setNightWakings(prev => ({ ...prev, [session.id]: wakings }));
+          }
+        } catch (error) {
+          console.error('Error fetching night wakings:', error);
+        }
+      }
+    };
+
+    if (uniqueSessions.length > 0) {
+      fetchNightWakings();
+    }
+  }, [uniqueSessions]);
 
   const handleEditSession = (session: SleepSession) => {
     setEditingSession(session);
@@ -185,6 +218,28 @@ export function SleepHistory({ sessions, onEditSession, onDeleteSession, classNa
                   {session.quality && (
                     <div className={`text-xs ${getQualityColor(session.quality)}`}>
                       {t.history.qualityLabel}: {getQualityText(session.quality)}
+                    </div>
+                  )}
+                  
+                  {/* Night Wakings */}
+                  {session.sleepType === 'NIGHTTIME' && nightWakings[session.id] && nightWakings[session.id].length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <div className="flex items-center gap-1 text-xs text-purple-600 font-medium mb-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {nightWakings[session.id].length} {nightWakings[session.id].length === 1 ? 'despertar' : 'despertares'}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {nightWakings[session.id].slice(0, 3).map((waking) => (
+                          <span key={waking.id} className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
+                            {new Date(waking.wakeTime).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        ))}
+                        {nightWakings[session.id].length > 3 && (
+                          <span className="text-xs text-purple-600">
+                            +{nightWakings[session.id].length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
