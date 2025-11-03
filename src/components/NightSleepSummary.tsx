@@ -1,8 +1,10 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Moon, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, Moon, TrendingUp, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface NightWaking {
   id: string;
@@ -29,6 +31,7 @@ export function NightSleepSummary({
 }: NightSleepSummaryProps) {
   const [wakings, setWakings] = useState<NightWaking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchWakings = useCallback(async () => {
     try {
@@ -57,6 +60,27 @@ export function NightSleepSummary({
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleDeleteWaking = async (wakingId: string) => {
+    setDeletingId(wakingId);
+    try {
+      const response = await fetch(`/api/night-waking/${wakingId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete waking');
+      }
+
+      toast.success('Despertar eliminado');
+      fetchWakings(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting night waking:', error);
+      toast.error('Error al eliminar despertar');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (isLoading) {
@@ -101,14 +125,25 @@ export function NightSleepSummary({
                 .map((waking) => (
                   <div
                     key={waking.id}
-                    className="flex items-center justify-between bg-white dark:bg-gray-900 rounded px-3 py-2 text-sm border"
+                    className="flex items-center justify-between bg-white dark:bg-gray-900 rounded px-3 py-2 text-sm border group"
                   >
                     <span className="font-medium">{formatTime(waking.wakeTime)}</span>
-                    {waking.durationMinutes && (
-                      <span className="text-muted-foreground text-xs">
-                        {waking.durationMinutes}min
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {waking.durationMinutes && (
+                        <span className="text-muted-foreground text-xs">
+                          {waking.durationMinutes}min
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteWaking(waking.id)}
+                        disabled={deletingId === waking.id}
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
             </div>
