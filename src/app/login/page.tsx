@@ -1,5 +1,6 @@
 'use client';
 
+import { DarkModeToggle } from '@/components/DarkModeToggle';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -54,15 +55,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+      {/* Dark Mode Toggle - Positioned Top Right */}
+      <div className="absolute top-4 right-4">
+        <DarkModeToggle />
+      </div>
+      
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg">
+            <div className="p-3 rounded-full bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg">
               <Baby className="w-8 h-8" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold bg-linear-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
             NapGenius
           </CardTitle>
           <CardDescription>
