@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Moon, Clock, TrendingUp } from 'lucide-react';
+import { Clock, Moon, TrendingUp } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface NightWaking {
   id: string;

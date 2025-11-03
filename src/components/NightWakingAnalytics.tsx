@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Moon, TrendingDown, Clock, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Award, Clock, Moon, TrendingDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface AnalyticsData {
   totalWakings: number;
