@@ -41,6 +41,9 @@ interface SessionApiResponse {
 export default function Home() {
   const router = useRouter();
   const {
+    currentUserId,
+    setCurrentUserId,
+    clearAllData,
     currentBaby,
     setCurrentBaby,
     activeSleepSession,
@@ -60,8 +63,8 @@ export default function Home() {
     syncScheduleConfig
   } = useSleepStore();
 
-  const { getThemeConfig, syncTheme } = useThemeStore();
-  const { t, syncLanguage } = useLanguageStore();
+  const { getThemeConfig, syncTheme, currentTheme, setTheme, getAllThemes } = useThemeStore();
+  const { t, syncLanguage, language, setLanguage, getAvailableLanguages } = useLanguageStore();
   const [mounted, setMounted] = useState(false);
   // Use default theme during SSR to avoid hydration mismatch
   const themeConfig = mounted ? getThemeConfig() : {
@@ -87,6 +90,38 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Check if user changed and clear store if needed
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          const serverUserId = data.user.id;
+          
+          // If stored userId is different from server userId, clear all data
+          if (currentUserId && currentUserId !== serverUserId) {
+            console.log('User changed, clearing store data');
+            clearAllData();
+          }
+          
+          // Update current user ID
+          setCurrentUserId(serverUserId);
+        } else if (response.status === 401) {
+          // User not logged in, clear everything
+          clearAllData();
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+      }
+    };
+
+    if (mounted) {
+      checkUser();
+    }
+  }, [mounted, currentUserId, setCurrentUserId, clearAllData, router]);
 
   // Sync user preferences from server on mount
   useEffect(() => {
@@ -527,6 +562,42 @@ export default function Home() {
                   <DialogTitle>{t.baby.babyInfo}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
+                  {/* Language & Theme Settings */}
+                  <div className="grid grid-cols-2 gap-3 pb-3 border-b">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-gray-600">
+                        {t.settings?.language || 'Language'}
+                      </label>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value as 'en' | 'es')}
+                        className="w-full p-2 border rounded-md text-sm"
+                      >
+                        {getAvailableLanguages().map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1 text-gray-600">
+                        {t.settings?.theme || 'Theme'}
+                      </label>
+                      <select
+                        value={currentTheme}
+                        onChange={(e) => setTheme(e.target.value as any)}
+                        className="w-full p-2 border rounded-md text-sm"
+                      >
+                        {getAllThemes().map((theme) => (
+                          <option key={theme.id} value={theme.id}>
+                            {theme.name[language]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       {t.baby.name}
@@ -601,6 +672,7 @@ export default function Home() {
                   isActive={isTimerRunning && !!activeSleepSession}
                   startTime={timerStartTime}
                   sleepType={activeSleepSession?.sleepType || 'NAP'}
+                  sessionId={activeSleepSession?.id}
                   onStartSleep={handleStartSleep}
                   onEndSleep={handleEndSleep}
                   onEditStartTime={handleEditStartTime}

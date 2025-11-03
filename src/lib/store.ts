@@ -49,6 +49,11 @@ export interface BabySettings {
 }
 
 interface SleepStore {
+  // User tracking (to detect user changes)
+  currentUserId: string | null;
+  setCurrentUserId: (userId: string | null) => void;
+  clearAllData: () => void;
+  
   // Current baby
   currentBaby: Baby | null;
   setCurrentBaby: (baby: Baby | null) => void;
@@ -96,6 +101,21 @@ interface SleepStore {
 export const useSleepStore: any = create<SleepStore>()(
   persist(
     (set) => ({
+      // User tracking
+      currentUserId: null,
+      setCurrentUserId: (userId) => set({ currentUserId: userId }),
+      clearAllData: () => set({
+        currentUserId: null,
+        currentBaby: null,
+        activeSleepSession: null,
+        sleepSessions: [],
+        predictions: [],
+        babySettings: {},
+        scheduleConfig: null,
+        timerStartTime: null,
+        isTimerRunning: false,
+      }),
+      
       // Current baby
       currentBaby: null,
       setCurrentBaby: (baby) => set({ currentBaby: baby }),

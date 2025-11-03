@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -66,6 +67,60 @@ export async function PATCH(
     
   } catch (error) {
     console.error('Update baby API Error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const { id: babyId } = await params;
+    
+    // Check if baby exists and user is owner
+    const baby = await prisma.baby.findUnique({
+      where: { id: babyId }
+    });
+    
+    if (!baby) {
+      return NextResponse.json(
+        { error: 'Baby not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user is the owner
+    if (baby.userId !== session.userId) {
+      return NextResponse.json(
+        { error: 'Only the baby owner can delete this profile' },
+        { status: 403 }
+      );
+    }
+
+    // Delete the baby (cascade will delete related records)
+    await prisma.baby.delete({
+      where: { id: babyId }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Baby profile deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Delete baby API Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

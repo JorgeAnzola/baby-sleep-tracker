@@ -8,11 +8,14 @@ import { useLanguageStore } from '@/lib/i18n/language-store';
 import { useThemeStore } from '@/lib/theme-store';
 import { Edit3, Moon, Square, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { NightWakingLogger } from '@/components/NightWakingLogger';
+import { NightSleepSummary } from '@/components/NightSleepSummary';
 
 interface SleepTimerProps {
   isActive: boolean;
   startTime: Date | null;
   sleepType: 'NAP' | 'NIGHTTIME';
+  sessionId?: string;
   onStartSleep: (type: 'NAP' | 'NIGHTTIME') => void;
   onEndSleep: () => void;
   onEditStartTime?: (newStartTime: Date) => void;
@@ -23,6 +26,7 @@ export function SleepTimer({
   isActive,
   startTime,
   sleepType,
+  sessionId,
   onStartSleep,
   onEndSleep,
   onEditStartTime,
@@ -170,6 +174,21 @@ export function SleepTimer({
             <Square className="w-5 h-5 mr-2" />
             {t.sleep.endSleep}
           </Button>
+
+          {/* Night Waking Components - Only shown during NIGHTTIME sessions */}
+          {sleepType === 'NIGHTTIME' && sessionId && startTime && (
+            <div className="mt-6 space-y-4">
+              <NightWakingLogger 
+                sleepSessionId={sessionId}
+                onSuccess={() => {
+                  // Optional: Add any refresh logic here if needed
+                }}
+              />
+              <NightSleepSummary 
+                sleepSessionId={sessionId}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     );

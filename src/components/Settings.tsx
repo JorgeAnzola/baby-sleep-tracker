@@ -8,9 +8,9 @@ import { Input } from '@/components/ui/input';
 import { APP_VERSION, DEVELOPER_NAME } from '@/lib/app-config';
 import { useLanguageStore } from '@/lib/i18n/language-store';
 import type { SleepSession } from '@/lib/store';
+import { useSleepStore } from '@/lib/store';
 import { useThemeStore } from '@/lib/theme-store';
 import { Baby, Check, Database, Edit3, Globe, Info, LogOut, Palette, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CollaboratorManagement } from './CollaboratorManagement';
 import { CsvImport } from './CsvImport';
@@ -27,12 +27,14 @@ interface SettingsProps {
 }
 
 export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, onBabyUpdate, sessions = [], isOwner = true }: SettingsProps) {
-  const router = useRouter();
+  const { clearAllData } = useSleepStore();
   const [isEditingBirthDate, setIsEditingBirthDate] = useState(false);
   const [newBirthDate, setNewBirthDate] = useState('');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDeletingData, setIsDeletingData] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingBaby, setIsDeletingBaby] = useState(false);
+  const [showDeleteBabyConfirm, setShowDeleteBabyConfirm] = useState(false);
   
   const { currentTheme, setTheme, getThemeConfig, getAllThemes } = useThemeStore();
   const { language, setLanguage, t, getAvailableLanguages } = useLanguageStore();
@@ -88,6 +90,9 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Clear all local store data before logout
+      clearAllData();
+      
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include'
@@ -134,6 +139,37 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
       alert('❌ Error al eliminar los datos');
     } finally {
       setIsDeletingData(false);
+    }
+  };
+
+  const handleDeleteBaby = async () => {
+    if (!showDeleteBabyConfirm) {
+      setShowDeleteBabyConfirm(true);
+      return;
+    }
+
+    setIsDeletingBaby(true);
+    try {
+      const response = await fetch(`/api/babies/${babyId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        // Clear store and redirect to home
+        clearAllData();
+        window.location.href = '/';
+      } else {
+        const error = await response.json();
+        alert(`❌ Error: ${error.error}`);
+        setShowDeleteBabyConfirm(false);
+      }
+    } catch (error) {
+      console.error('Delete baby error:', error);
+      alert('❌ Error al eliminar el perfil del bebé');
+      setShowDeleteBabyConfirm(false);
+    } finally {
+      setIsDeletingBaby(false);
     }
   };
 
@@ -412,6 +448,62 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
                   )}
                 </CardContent>
               </Card>
+
+              {/* Delete Baby Profile */}
+              {isOwner && (
+                <Card className={`border-0 shadow-lg bg-linear-to-br ${themeConfig.colors.card} backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:scale-[1.01]`}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="font-semibold text-red-900">Eliminar Perfil del Bebé</span>
+                      <Badge variant="destructive" className="text-xs bg-linear-to-r from-red-600 to-red-700 text-white border-0 shadow-sm">
+                        Permanente
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+                      Elimina permanentemente el perfil del bebé y TODOS sus datos asociados (sesiones, configuraciones, etc.). Esta acción NO se puede deshacer.
+                    </p>
+                    {!showDeleteBabyConfirm ? (
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={handleDeleteBaby}
+                        className="w-full bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Eliminar Perfil de {babyName}
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-red-700 mb-2">
+                          ⚠️ ¿Estás COMPLETAMENTE seguro? Esto eliminará el perfil de {babyName} y todos sus {sessions.length} registros para siempre.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            onClick={handleDeleteBaby}
+                            disabled={isDeletingBaby}
+                            className="flex-1 bg-red-700 hover:bg-red-800"
+                          >
+                            {isDeletingBaby ? 'Eliminando...' : 'Sí, Eliminar Todo'}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setShowDeleteBabyConfirm(false)}
+                            disabled={isDeletingBaby}
+                            className="flex-1"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
 
