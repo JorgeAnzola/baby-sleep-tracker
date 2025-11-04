@@ -18,6 +18,7 @@ interface NightWaking {
 interface NightSleepSummaryProps {
   sleepSessionId: string;
   sessionEndTime?: Date | string | null;
+  optimisticCount?: number;
 }
 
 /**
@@ -27,7 +28,8 @@ interface NightSleepSummaryProps {
  */
 export function NightSleepSummary({ 
   sleepSessionId, 
-  sessionEndTime 
+  sessionEndTime,
+  optimisticCount = 0
 }: NightSleepSummaryProps) {
   const [wakings, setWakings] = useState<NightWaking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +48,10 @@ export function NightSleepSummary({
       setIsLoading(false);
     }
   }, [sleepSessionId]);
+
+  const handleOptimisticUpdate = () => {
+    // No longer needed, using prop instead
+  };
 
   useEffect(() => {
     fetchWakings();
@@ -106,7 +112,7 @@ export function NightSleepSummary({
         <div className="flex justify-center">
           <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border min-w-[120px] text-center">
             <div className="text-3xl font-bold text-purple-600">
-              {wakings.length}
+              {wakings.length + optimisticCount}
             </div>
             <div className="text-sm text-muted-foreground">Despertares</div>
           </div>

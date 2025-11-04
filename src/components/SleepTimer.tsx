@@ -38,6 +38,12 @@ export function SleepTimer({
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editTime, setEditTime] = useState('');
+  const [nightSummaryKey, setNightSummaryKey] = useState(0);
+  const [optimisticWakingUpdate, setOptimisticWakingUpdate] = useState(0);
+
+  const handleOptimisticWakingUpdate = () => {
+    setOptimisticWakingUpdate(prev => prev + 1);
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -180,12 +186,15 @@ export function SleepTimer({
             <div className="mt-6 space-y-4">
               <NightWakingLogger 
                 sleepSessionId={sessionId}
+                onOptimisticUpdate={handleOptimisticWakingUpdate}
                 onSuccess={() => {
-                  // Optional: Add any refresh logic here if needed
+                  setNightSummaryKey(prev => prev + 1);
                 }}
               />
               <NightSleepSummary 
+                key={nightSummaryKey}
                 sleepSessionId={sessionId}
+                optimisticCount={optimisticWakingUpdate}
               />
             </div>
           )}

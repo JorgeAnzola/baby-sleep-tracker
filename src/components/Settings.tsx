@@ -10,10 +10,11 @@ import { useLanguageStore } from '@/lib/i18n/language-store';
 import type { SleepSession } from '@/lib/store';
 import { useSleepStore } from '@/lib/store';
 import { useThemeStore } from '@/lib/theme-store';
-import { Baby, Check, Database, Edit3, Globe, Info, LogOut, Palette, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
+import { Baby, Check, Database, Edit3, Globe, Info, LogOut, Moon, Palette, Settings as SettingsIcon, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { CollaboratorManagement } from './CollaboratorManagement';
 import { CsvImport } from './CsvImport';
+import { DarkModeToggle } from './DarkModeToggle';
 import ScheduleConfig from './ScheduleConfig';
 
 interface SettingsProps {
@@ -303,13 +304,32 @@ export function Settings({ babyId, babyName, babyBirthDate, onImportComplete, on
 
           <div className="border-t border-gray-200/50 my-6"></div>
 
+          {/* Dark Mode Toggle */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl bg-linear-to-r ${themeConfig.colors.primary} text-white shadow-md`}>
+                <Moon className="w-4 h-4" />
+              </div>
+              <h3 className="font-semibold text-lg bg-linear-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
+                Apariencia
+              </h3>
+            </div>
+            <Card className={`border-0 shadow-lg bg-linear-to-br ${themeConfig.colors.card} backdrop-blur-sm transition-all duration-300 hover:shadow-xl`}>
+              <CardContent className="p-6">
+                <DarkModeToggle />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="border-t border-gray-200/50 my-6"></div>
+
           {/* Language Selection */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl bg-linear-to-r ${themeConfig.colors.primary} text-white shadow-md`}>
                 <Globe className="w-4 h-4" />
               </div>
-              <h3 className="font-semibold text-lg bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+              <h3 className="font-semibold text-lg bg-linear-to-r from-gray-800 to-gray-600 dark:from-gray-200 dark:to-gray-400 bg-clip-text text-transparent">
                 {t.settings.language}
               </h3>
             </div>

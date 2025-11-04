@@ -1,6 +1,5 @@
 'use client';
 
-import { DarkModeToggle } from '@/components/DarkModeToggle';
 import { Settings } from '@/components/Settings';
 import { SleepHistorySkeleton, SleepPredictionsSkeleton } from '@/components/SkeletonLoaders';
 import { SleepHistory } from '@/components/SleepHistory';
@@ -649,7 +648,6 @@ export default function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <DarkModeToggle />
             <Settings 
               babyId={currentBaby.id}
               babyName={currentBaby.name}

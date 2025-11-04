@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 interface NightWakingLoggerProps {
   sleepSessionId: string;
   onSuccess?: () => void;
+  onOptimisticUpdate?: () => void;
 }
 
 /**
@@ -15,10 +16,15 @@ interface NightWakingLoggerProps {
  * One-tap button to log night wakings with current timestamp
  * Designed for 3am use - no forms, no questions
  */
-export function NightWakingLogger({ sleepSessionId, onSuccess }: NightWakingLoggerProps) {
+export function NightWakingLogger({ sleepSessionId, onSuccess, onOptimisticUpdate }: NightWakingLoggerProps) {
   const [isLogging, setIsLogging] = useState(false);
 
   const handleQuickLog = async () => {
+    // Optimistic update - increment count immediately
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate();
+    }
+
     setIsLogging(true);
     
     // Agregar un pequeño delay para que sea más visible
@@ -75,7 +81,7 @@ export function NightWakingLogger({ sleepSessionId, onSuccess }: NightWakingLogg
       ) : (
         <>
           <Moon className="mr-2 h-6 w-6" />
-          Registrar Despertar
+          Anotar Interrupción
         </>
       )}
     </Button>
